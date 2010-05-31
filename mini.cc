@@ -1,8 +1,6 @@
 // A new window manager based off my other window manager aewm++ 
 // Copyright (C) 2010 Frank Hale <frankhale@gmail.com>
 //
-// aewm++ can be found here: http://code.google.com/p/aewmpp/
-//
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 3
