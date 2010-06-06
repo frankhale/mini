@@ -544,7 +544,7 @@ void WindowManager::handleFocusInEvent(XEvent *ev)
 
       if(c)
       {
-        unfocusAnyStrayClients();
+        //unfocusAnyStrayClients();
         handleClientFocusInEvent(&ev->xfocus, c);
         focused_client = c;
         grabKeys((*iter));
