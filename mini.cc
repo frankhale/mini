@@ -544,7 +544,7 @@ void WindowManager::handleFocusInEvent(XEvent *ev)
 
       if(c)
       {
-        //unfocusAnyStrayClients();
+        unfocusAnyStrayClients();
         handleClientFocusInEvent(&ev->xfocus, c);
         focused_client = c;
         grabKeys((*iter));
@@ -1640,7 +1640,7 @@ void WindowManager::focusPreviousWindowInStackingOrder()
 
       if(c)
       {
-        if(!c->has_title)
+        if(c->has_title)
           client_list_for_current_desktop.push_back(c);
       }
     }
