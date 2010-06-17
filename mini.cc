@@ -68,15 +68,13 @@ WindowManager::WindowManager(int argc, char** argv)
   signal(SIGHUP, sigHandler);
   signal(SIGCHLD, sigHandler);
 
-  std::string window_placement = DEFAULT_WINDOW_PLACEMENT;
+  int window_placement = DEFAULT_WINDOW_PLACEMENT;
 
-  if (window_placement.compare("random")==0)
+  if(window_placement == MOUSE)
+    random_window_placement = false;
+  else if(window_placement == RANDOM)
     random_window_placement = true;
-  else if (window_placement.compare("mouse")==0)
-    random_window_placement = false;
-  else
-    random_window_placement = false;
-
+  
   dpy = XOpenDisplay(getenv("DISPLAY"));
 
   if(dpy)
@@ -220,8 +218,7 @@ void WindowManager::addClient(Window w)
   c->old_width = c->width;
   c->old_height = c->height;
 
-  if (attr.map_state == IsViewable)
-    c->ignore_unmap++;
+  if (attr.map_state == IsViewable) c->ignore_unmap++;
   {
     initClientPosition(c);
 
@@ -1535,9 +1532,7 @@ int WindowManager::getClientTitleHeight(Client* c)
 {
   if (!c->has_title) return 0;
 
-  int title_size = font->ascent + font->descent + SPACE;
-
-  return (c->trans) ? TRANSIENT_WINDOW_HEIGHT : title_size;
+  return (c->trans) ? TRANSIENT_WINDOW_HEIGHT : (font->ascent + font->descent + SPACE);
 }
 
 void WindowManager::sendClientConfig(Client* c)
@@ -1717,5 +1712,6 @@ int handleXError(Display *dpy, XErrorEvent *e)
 int main(int argc, char** argv)
 {
   WindowManager mini(argc, argv);
+  
   return 0;
 }

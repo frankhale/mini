@@ -57,6 +57,10 @@ enum {
   PIXELS = 0, INCREMENTS = 1
 };
 
+enum {
+  MOUSE = 0, RANDOM = 1
+};
+
 #define DEFAULT_FONT                "Fixed"
 #define DEFAULT_FOREGROUND_COLOR    "#ffffff"
 #define DEFAULT_BACKGROUND_COLOR    "#555555"
@@ -75,7 +79,7 @@ enum {
 #define TEXT_JUSTIFY                RIGHT_JUSTIFY
 #define WIRE_MOVE                   false
 #define DEFAULT_FOCUS_MODEL         FOCUS_CLICK
-#define DEFAULT_WINDOW_PLACEMENT    "mouse"
+#define DEFAULT_WINDOW_PLACEMENT    MOUSE
 #define TRANSIENT_WINDOW_HEIGHT     8
 #define ALT_KEY_COUNT               2
 
