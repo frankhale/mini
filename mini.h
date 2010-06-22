@@ -251,7 +251,7 @@ private:
   void grabKeys(Window w);
   void ungrabKeys(Window w);
   void getMousePosition(int *x, int *y);
-
+  
 public:
   WindowManager(int argc, char** argv);
 };

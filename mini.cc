@@ -202,8 +202,11 @@ void WindowManager::addClient(Window w)
   queryClientName(c);
 
   XGetTransientForHint(dpy, c->window, &c->trans);
+
   XGetWindowAttributes(dpy, c->window, &attr);
 
+  if (attr.map_state == IsViewable) c->ignore_unmap++;
+  
   c->x = attr.x;
   c->y = attr.y;
   c->width = attr.width;
@@ -218,21 +221,18 @@ void WindowManager::addClient(Window w)
   c->old_width = c->width;
   c->old_height = c->height;
 
-  if (attr.map_state == IsViewable) c->ignore_unmap++;
+  initClientPosition(c);
+  
+  if ((hints = XGetWMHints(dpy, w)))
   {
-    initClientPosition(c);
+    if (hints->flags & StateHint)
+     setWMState(c->window, hints->initial_state);
+    else
+     setWMState(c->window, NormalState);
 
-    if ((hints = XGetWMHints(dpy, w)))
-    {
-      if (hints->flags & StateHint)
-        setWMState(c->window, hints->initial_state);
-      else
-        setWMState(c->window, NormalState);
-
-      XFree(hints);
-    }
+    XFree(hints);
   }
-
+  
   gravitateClient(c, APPLY_GRAVITY);
 
   reparentClient(c);
@@ -408,16 +408,17 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
     break;
 
   case FOCUS_CLICK:
-    // if this is the first time the client window's clicked, focus it
-    if(c && c != focused_client)
+    if(c)
     {
-      XSetInputFocus(dpy, c->window, RevertToNone, CurrentTime);
-      focused_client = c;
-    }
+      // if this is the first time the client window's clicked, focus it
+      if(c != focused_client)
+      {
+        XSetInputFocus(dpy, c->window, RevertToNone, CurrentTime);
+        focused_client = c;
+      }
 
-    // otherwise, handle the button click as usual
-    if(c && c == focused_client)
       handleClientButtonEvent(&ev->xbutton, c);
+    }
     break;
   }
 }
@@ -573,28 +574,9 @@ void WindowManager::handleFocusOutEvent(XEvent *ev)
     }
   }
 
-  if(focus_model == FOCUS_CLICK)
+  if((focus_model == FOCUS_CLICK) ||
+     (focus_model == FOCUS_SLOPPY))
     focusPreviousWindowInStackingOrder();
-  else if(focus_model == FOCUS_SLOPPY && client_list.size())
-  {
-    unsigned int nwins;
-    Window dummyw1, dummyw2, *wins;
-    Client *c=NULL;
-
-    XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
-    for (unsigned int i = 0; i < nwins; i++)
-    {
-      c = findClient(wins[i]);
-
-      if(c)
-      {
-        focusPreviousWindowInStackingOrder();
-        return;
-      }
-    }
-
-    XSetInputFocus(dpy, PointerRoot, RevertToNone, CurrentTime);
-  }
 }
 
 void WindowManager::handlePropertyNotifyEvent(XEvent *ev)
@@ -624,22 +606,16 @@ void WindowManager::handleDefaultEvent(XEvent *ev)
   }
 }
 
-// Dunno where I ripped this from function. Kudos to the author whoever (s)he is!
 void WindowManager::forkExec(std::string cmd)
 {
   if(! (cmd.length()>0))
     return;
 
-  pid_t pid = fork();
-
-  switch (pid)
+  switch(fork())
   {
-  case 0:
-    execlp("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
-    std::cerr << "exec failed, cleaning up..." << std::endl;
-    exit(1);
-  case -1:
-    std::cerr << "can't fork" << std::endl;
+    case 0:
+      execlp("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
+    break;
   }
 }
 
@@ -664,8 +640,7 @@ void WindowManager::cleanup()
   Window dummyw1, dummyw2, *wins;
   Client* c;
 
-  // Preserve stacking order when removing the clients
-  // from the list.
+  // Preserve stacking order when removing the clientfrom the list.
   XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
   for (i = 0; i < nwins; i++)
   {
@@ -1617,19 +1592,19 @@ void WindowManager::setClientShape(Client* c)
 
 void WindowManager::focusPreviousWindowInStackingOrder()
 {
-  unsigned int nwins, i;
+  unsigned int nwins;
   Window dummyw1, dummyw2, *wins;
   Client *c=NULL;
 
   XSetInputFocus(dpy, _button_proxy_win, RevertToNone, CurrentTime);
 
   XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
-
+  
   if(client_list.size())
   {
     std::list<Client*> client_list_for_current_desktop;
 
-    for (i = 0; i < nwins; i++)
+    for (unsigned int i = 0; i < nwins; i++)
     {
       c = findClient(wins[i]);
 
