@@ -1,5 +1,5 @@
 // A new window manager based off my other window manager aewm++
-// Copyright (C) 2010 Frank Hale <frankhale@gmail.com>
+// Copyright (C) 2010-2012 Frank Hale <frankhale@gmail.com>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,16 +19,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 2 June 2010
+// Updated: 8 August 2012
 
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "mini window manager (serenity) | 6 june 2010 | http://github.com/frankhale | frank hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 8 August 2012 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
+#include <X11/XKBlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/Xmd.h>
@@ -36,6 +37,7 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 #include <list>
 #include <string>
 #include <string.h>

@@ -1,5 +1,5 @@
 // A new window manager based off my other window manager aewm++
-// Copyright (C) 2010 Frank Hale <frankhale@gmail.com>
+// Copyright (C) 2010-2012 Frank Hale <frankhale@gmail.com>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 2 June 2010
+// Date: 8 August 2012
 
 #include "mini.h"
 
@@ -30,13 +30,13 @@ KeySym WindowManager::alt_keys[] = { XK_Delete, XK_End };
 void WindowManager::grabKeys(Window w)
 {
   for(int i=0;i<ALT_KEY_COUNT;i++)
-    XGrabKey(dpy,XKeysymToKeycode(dpy,alt_keys[i]), (Mod1Mask|ControlMask), w,True,GrabModeAsync,GrabModeAsync);
+    XGrabKey(dpy, XkbKeycodeToKeysym(dpy, alt_keys[i], 0, 1), (Mod1Mask|ControlMask), w,True,GrabModeAsync,GrabModeAsync);
 }
 
 void WindowManager::ungrabKeys(Window w)
 {
   for(int i=0;i<ALT_KEY_COUNT;i++)
-    XUngrabKey(dpy,XKeysymToKeycode(dpy,alt_keys[i]), (Mod1Mask|ControlMask),w);
+    XUngrabKey(dpy, XkbKeycodeToKeysym(dpy,alt_keys[i], 0, 1), (Mod1Mask|ControlMask),w);
 }
 
 WindowManager::WindowManager(int argc, char** argv)
@@ -361,7 +361,7 @@ void WindowManager::doEventLoop()
 
 void WindowManager::handleKeyPressEvent(XEvent *ev)
 {
-  KeySym ks = XKeycodeToKeysym(dpy,ev->xkey.keycode,0);
+  KeySym ks = XkbKeycodeToKeysym(dpy, ev->xkey.keycode, 0, 1);
 
   if (ks==NoSymbol)
     return;
