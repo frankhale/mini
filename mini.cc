@@ -19,9 +19,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 8 August 2012
+// Date: 20 August 2012
 
-#include "mini.h"
+#include "mini.hh"
 
 WindowManager *wm;
 
@@ -68,13 +68,13 @@ WindowManager::WindowManager(int argc, char** argv)
   signal(SIGHUP, sigHandler);
   signal(SIGCHLD, sigHandler);
 
-  int window_placement = DEFAULT_WINDOW_PLACEMENT;
+  WindowPlacement window_placement = DEFAULT_WINDOW_PLACEMENT;
 
-  if(window_placement == MOUSE)
+  if(window_placement == WindowPlacement::MOUSE)
     random_window_placement = false;
-  else if(window_placement == RANDOM)
+  else if(window_placement == WindowPlacement::RANDOM)
     random_window_placement = true;
-  
+
   dpy = XOpenDisplay(getenv("DISPLAY"));
 
   if(dpy)
@@ -101,9 +101,9 @@ WindowManager::WindowManager(int argc, char** argv)
   // SET UP ATOMS
   atom_wm_state       = XInternAtom(dpy, "WM_STATE", False);
   atom_wm_change_state  = XInternAtom(dpy, "WM_CHANGE_STATE", False);
-  atom_wm_protos       = XInternAtom(dpy, "WM_PROTOCOLS", False);
+  atom_wm_protos       = XInternAtom(dpy, "WM_PROTOCOLS", True);
   atom_wm_delete       = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
-  atom_wm_takefocus    = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
+  atom_wm_takefocus    = XInternAtom(dpy, "WM_TAKE_FOCUS", True);
 
   XSetWindowAttributes pattr;
   pattr.override_redirect=True;
@@ -146,6 +146,7 @@ WindowManager::WindowManager(int argc, char** argv)
 
   sattr.event_mask = SubstructureRedirectMask |
                      SubstructureNotifyMask   |
+                     //StructureNotifyMask      |
                      ButtonPressMask          |
                      ButtonReleaseMask        |
                      FocusChangeMask          |
@@ -222,9 +223,11 @@ void WindowManager::addClient(Window w)
   c->old_height = c->height;
 
   initClientPosition(c);
-  
+
   if ((hints = XGetWMHints(dpy, w)))
   {
+    if(hints->flags & InputHint)
+      c->should_takefocus=!hints->input;
     if (hints->flags & StateHint)
      setWMState(c->window, hints->initial_state);
     else
@@ -232,15 +235,19 @@ void WindowManager::addClient(Window w)
 
     XFree(hints);
   }
-  
-  gravitateClient(c, APPLY_GRAVITY);
+
+  Atom protocols[2];
+  protocols[0] = atom_wm_takefocus;
+  protocols[1] = atom_wm_delete;
+  XSetWMProtocols (dpy, c->window, protocols, 2);
+
+  gravitateClient(c, Gravity::APPLY);
 
   reparentClient(c);
 
   unhideClient(c);
-  
-  if(focus_model == FOCUS_CLICK)
-    XSetInputFocus(dpy, c->window, RevertToNone, CurrentTime);
+    
+  setXFocus(c);
 
   XSync(dpy, False);
   XUngrabServer(dpy);
@@ -255,7 +262,7 @@ void WindowManager::removeClient(Client* c)
   
   XUngrabButton(dpy, AnyButton, AnyModifier, c->frame);
 
-  gravitateClient(c, REMOVE_GRAVITY);
+  gravitateClient(c, Gravity::REMOVE);
   
   XReparentWindow(dpy, c->window, root, c->x, c->y);
 
@@ -352,6 +359,10 @@ void WindowManager::doEventLoop()
       handleExposeEvent(&ev);
       break;
 
+    //case ClientMessage:
+    //  printf("client message\n");
+    //  break;
+
     default:
       handleDefaultEvent(&ev);
       break;
@@ -398,8 +409,8 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
 
   switch (focus_model)
   {
-  case FOCUS_FOLLOW:
-  case FOCUS_SLOPPY:
+    case FocusMode::FOLLOW:
+    case FocusMode::SLOPPY:
     if(c)
     {
       handleClientButtonEvent(&ev->xbutton, c);
@@ -407,7 +418,7 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
     }
     break;
 
-  case FOCUS_CLICK:
+    case FocusMode::CLICK:
     if(c)
     {
       // if this is the first time the client window's clicked, focus it
@@ -507,24 +518,27 @@ void WindowManager::handleEnterNotifyEvent(XEvent *ev)
 
   switch (focus_model)
   {
-  case FOCUS_FOLLOW:
-    if(c)
-    {
-      handleClientEnterEvent(&ev->xcrossing, c);
-      focused_client = c;
-    }
-    else
-      XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+    case FocusMode::FOLLOW:
+      if(c)
+      {
+        handleClientEnterEvent(&ev->xcrossing, c);
+        focused_client = c;
+      }
+      else
+        XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
     break;
 
-  case FOCUS_SLOPPY:
-    // if the pointer's not on a client now, don't change focus
-    if(c)
-    {
-      handleClientEnterEvent(&ev->xcrossing, c);
-      focused_client = c;
-    }
-    break;
+    case FocusMode::SLOPPY:
+      // if the pointer's not on a client now, don't change focus
+      if(c)
+      {
+        handleClientEnterEvent(&ev->xcrossing, c);
+        focused_client = c;
+      }
+      break;
+
+    case FocusMode::CLICK:
+      break;
   }
 }
 
@@ -550,7 +564,7 @@ void WindowManager::handleFocusInEvent(XEvent *ev)
     }
     else
     {
-      if(ev->xfocus.window==root && focus_model==FOCUS_FOLLOW)
+      if(ev->xfocus.window==root && focus_model==FocusMode::FOLLOW)
         unfocusAnyStrayClients();
     }
   }
@@ -574,8 +588,8 @@ void WindowManager::handleFocusOutEvent(XEvent *ev)
     }
   }
 
-  if((focus_model == FOCUS_CLICK) ||
-     (focus_model == FOCUS_SLOPPY))
+  if((focus_model == FocusMode::CLICK) ||
+     (focus_model == FocusMode::SLOPPY))
     focusPreviousWindowInStackingOrder();
 }
 
@@ -732,7 +746,7 @@ void WindowManager::sendWMDelete(Window window)
     XFree(protocols);
   }
 
-  (found) ? sendXMessage(window, atom_wm_protos, NoEventMask, atom_wm_delete) : XKillClient(dpy, window);
+  (found) ? sendXMessage(window, atom_wm_protos, RevertToParent, atom_wm_delete) : XKillClient(dpy, window);
 }
 
 int WindowManager::sendXMessage(Window w, Atom a, long mask, long x)
@@ -869,7 +883,8 @@ void WindowManager::handleClientConfigureRequest(XConfigureRequestEvent *ev, Cli
 {
   int theight = getClientTitleHeight(c);
 
-  gravitateClient(c, REMOVE_GRAVITY);
+  gravitateClient(c, Gravity::REMOVE);
+
   if (ev->value_mask & CWX)
     c->x = ev->x;
   if (ev->value_mask & CWY)
@@ -878,7 +893,8 @@ void WindowManager::handleClientConfigureRequest(XConfigureRequestEvent *ev, Cli
     c->width = ev->width;
   if (ev->value_mask & CWHeight)
     c->height = ev->height;
-  gravitateClient(c, APPLY_GRAVITY);
+
+  gravitateClient(c, Gravity::APPLY);
 
   if(! c->is_shaded)
   {
@@ -942,7 +958,8 @@ void WindowManager::handleClientPropertyChange(XPropertyEvent *ev, Client* c)
 
 void WindowManager::handleClientEnterEvent(XCrossingEvent *ev, Client* c)
 {
-  XSetInputFocus(dpy, c->window, RevertToNone, CurrentTime);
+  if(focus_model == FocusMode::FOLLOW)
+    setXFocus(c);
 }
 
 void WindowManager::handleClientExposeEvent(XExposeEvent *ev, Client* c)
@@ -953,7 +970,7 @@ void WindowManager::handleClientExposeEvent(XExposeEvent *ev, Client* c)
 
 void WindowManager::handleClientFocusInEvent(XFocusChangeEvent *ev, Client* c)
 {
-  sendXMessage(c->window, atom_wm_protos, SubstructureRedirectMask, atom_wm_takefocus);
+  
   setClientFocus(c, true);
 }
 
@@ -1052,7 +1069,7 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, Client* c)
         c->width =  ev->x;
         c->height = ev->y - theight;
 
-        getClientIncsize(c, &c->width, &c->height, PIXELS);
+        getClientIncsize(c, &c->width, &c->height, ResizeMode::PIXELS);
 
         if (c->size->flags & PMinSize)
         {
@@ -1113,6 +1130,19 @@ void WindowManager::setClientFocus(Client* c, bool focus)
   }
 }
 
+void WindowManager::setXFocus(Client* c)
+{
+  if(focus_model == FocusMode::CLICK)
+  {
+    if(!c->should_takefocus)
+      XSetInputFocus(dpy, c->window, RevertToPointerRoot, CurrentTime);
+    else 
+      sendXMessage(c->window, atom_wm_protos, NoEventMask, atom_wm_takefocus);
+  }
+  else
+    XSetInputFocus(dpy, c->window, RevertToPointerRoot, CurrentTime);
+}
+
 void WindowManager::hideClient(Client* c)
 {
   if (!c->ignore_unmap)
@@ -1136,8 +1166,7 @@ void WindowManager::unhideClient(Client* c)
 
   setWMState(c->window, NormalState);
 
-  if(focus_model == FOCUS_CLICK)
-    XSetInputFocus(dpy, c->window, RevertToNone, CurrentTime);
+  setXFocus(c);
 
   c->is_visible=true;
 }
@@ -1259,6 +1288,7 @@ void WindowManager::initializeClient(Client* c)
   c->is_being_dragged = false;
   c->do_drawoutline_once = false;
   c->is_being_resized = false;
+  c->should_takefocus = false;
 }
 
 void WindowManager::redrawClient(Client* c)
@@ -1286,15 +1316,15 @@ void WindowManager::redrawClient(Client* c)
   {
     switch(TEXT_JUSTIFY)
     {
-    case LEFT_JUSTIFY:
-      c->text_justify = SPACE;
+     case JustifyMode::LEFT:
+       c->text_justify = SPACE;
       break;
 
-    case CENTER_JUSTIFY:
+     case JustifyMode::CENTER:
       c->text_justify = ( (c->width / 2) - (c->text_width / 2) );
       break;
 
-    case RIGHT_JUSTIFY:
+     case JustifyMode::RIGHT:
       c->text_justify = c->width - c->text_width - 25;
       break;
     }
@@ -1322,7 +1352,7 @@ void WindowManager::drawClientOutline(Client* c)
     XDrawRectangle(dpy, root, invert_gc, c->x + BW/2, c->y - theight + BW/2, c->width + BW, theight + BW);
 }
 
-int  WindowManager::getClientIncsize(Client* c, int *x_ret, int *y_ret, int mode)
+int  WindowManager::getClientIncsize(Client* c, int *x_ret, int *y_ret, ResizeMode mode)
 {
   int basex, basey;
 
@@ -1334,7 +1364,7 @@ int  WindowManager::getClientIncsize(Client* c, int *x_ret, int *y_ret, int mode
     basey = (c->size->flags & PBaseSize) ? c->size->base_height :
             (c->size->flags & PMinSize) ? c->size->min_height : 0;
 
-    if (mode == PIXELS)
+    if (mode == ResizeMode::PIXELS)
     {
       *x_ret = c->width - ((c->width - basex) % c->size->width_inc);
       *y_ret = c->height - ((c->height - basey) % c->size->height_inc);
@@ -1412,7 +1442,7 @@ void WindowManager::initClientPosition(Client* c)
             c->y = (c->y<theight) ? theight : c->y;
           }
 
-          gravitateClient(c, REMOVE_GRAVITY);
+          gravitateClient(c, Gravity::REMOVE);
         }
       }
     }
@@ -1527,7 +1557,7 @@ void WindowManager::sendClientConfig(Client* c)
   XSendEvent(dpy, c->window, False, StructureNotifyMask, (XEvent *)&ce);
 }
 
-void WindowManager::gravitateClient(Client* c, int multiplier)
+void WindowManager::gravitateClient(Client* c, Gravity multiplier)
 {
   int dy = 0;
   int gravity = (c->size->flags & PWinGravity) ? c->size->win_gravity : NorthWestGravity;
@@ -1545,7 +1575,7 @@ void WindowManager::gravitateClient(Client* c, int multiplier)
     break;
   }
 
-  c->y += multiplier * dy;
+  c->y += (int)multiplier * dy;
 }
 
 void WindowManager::setClientShape(Client* c)

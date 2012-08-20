@@ -22,15 +22,15 @@
 #
 # Started: 28 January 2010 
 # Date: 30 May 2010
-CC = g++
-ADDITIONAL_CFLAGS = -g -O2 -Wall
+CC = clang++
+ADDITIONAL_CFLAGS = -ggdb -O2 -Wall -std=c++11 -Wc++11-extensions
 
-prefix   = /usr/bin
+prefix   = 
 INCLUDES = -I$/usr/X11R6
 LDPATH   = -L/usr/X11R6/lib
 LIBS     = -lXext -lX11
 
-HEADERS  = mini.h 
+HEADERS  = mini.hh 
 
 OBJS     = mini.o 	
 
