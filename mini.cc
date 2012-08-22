@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 20 August 2012
+// Date: 21 August 2012
 
 #include "mini.hh"
 
@@ -146,7 +146,6 @@ WindowManager::WindowManager(int argc, char** argv)
 
   sattr.event_mask = SubstructureRedirectMask |
                      SubstructureNotifyMask   |
-                     //StructureNotifyMask      |
                      ButtonPressMask          |
                      ButtonReleaseMask        |
                      FocusChangeMask          |
@@ -235,11 +234,6 @@ void WindowManager::addClient(Window w)
 
     XFree(hints);
   }
-
-  Atom protocols[2];
-  protocols[0] = atom_wm_takefocus;
-  protocols[1] = atom_wm_delete;
-  XSetWMProtocols (dpy, c->window, protocols, 2);
 
   gravitateClient(c, Gravity::APPLY);
 
@@ -359,10 +353,6 @@ void WindowManager::doEventLoop()
       handleExposeEvent(&ev);
       break;
 
-    //case ClientMessage:
-    //  printf("client message\n");
-    //  break;
-
     default:
       handleDefaultEvent(&ev);
       break;
@@ -424,7 +414,8 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
       // if this is the first time the client window's clicked, focus it
       if(c != focused_client)
       {
-        XSetInputFocus(dpy, c->window, RevertToNone, CurrentTime);
+        //XSetInputFocus(dpy, c->window, RevertToPointerRoot, CurrentTime);
+        setXFocus(c);
         focused_client = c;
       }
 
@@ -746,7 +737,7 @@ void WindowManager::sendWMDelete(Window window)
     XFree(protocols);
   }
 
-  (found) ? sendXMessage(window, atom_wm_protos, RevertToParent, atom_wm_delete) : XKillClient(dpy, window);
+  (found) ? sendXMessage(window, atom_wm_protos, 0L, atom_wm_delete) : XKillClient(dpy, window);
 }
 
 int WindowManager::sendXMessage(Window w, Atom a, long mask, long x)
@@ -1130,15 +1121,10 @@ void WindowManager::setClientFocus(Client* c, bool focus)
   }
 }
 
-void WindowManager::setXFocus(Client* c)
+void WindowManager::setXFocus(Client *c)
 {
-  if(focus_model == FocusMode::CLICK)
-  {
-    if(!c->should_takefocus)
-      XSetInputFocus(dpy, c->window, RevertToPointerRoot, CurrentTime);
-    else 
-      sendXMessage(c->window, atom_wm_protos, NoEventMask, atom_wm_takefocus);
-  }
+  if(c->should_takefocus)
+    sendXMessage(c->window, atom_wm_protos, 0L, atom_wm_takefocus);
   else
     XSetInputFocus(dpy, c->window, RevertToPointerRoot, CurrentTime);
 }
@@ -1653,7 +1639,10 @@ void WindowManager::focusPreviousWindowInStackingOrder()
 
       if( (*iter) )
       {
-        XSetInputFocus(dpy, (*iter)->window, RevertToNone, CurrentTime);
+        Client* c = findClient((*iter)->window);
+        
+        if(c)
+          setXFocus(c);
 
         client_list_for_current_desktop.clear();
 
