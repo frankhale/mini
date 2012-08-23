@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 21 August 2012
+// Date: 22 August 2012
 
 #include "mini.hh"
 
@@ -737,7 +737,7 @@ void WindowManager::sendWMDelete(Window window)
     XFree(protocols);
   }
 
-  (found) ? sendXMessage(window, atom_wm_protos, 0L, atom_wm_delete) : XKillClient(dpy, window);
+  (found) ? sendXMessage(window, atom_wm_protos, RevertToNone, atom_wm_delete) : XKillClient(dpy, window);
 }
 
 int WindowManager::sendXMessage(Window w, Atom a, long mask, long x)
