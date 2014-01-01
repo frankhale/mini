@@ -50,8 +50,8 @@ enum class ResizeMode { PIXELS = 0, INCREMENTS = 1 };
 enum class WindowPlacement { MOUSE = 0, RANDOM = 1 };
 
 #define DEFAULT_FONT                "Fixed"
-#define DEFAULT_FOREGROUND_COLOR    "#ffffff"
-#define DEFAULT_BACKGROUND_COLOR    "#555555"
+#define DEFAULT_FOREGROUND_COLOR    "#000000"
+#define DEFAULT_BACKGROUND_COLOR    "#999999"
 #define DEFAULT_FOCUS_COLOR         "#dddddd"
 #define DEFAULT_BORDER_COLOR        "#000000"
 #define FOCUSED_BORDER_COLOR        "#000000"

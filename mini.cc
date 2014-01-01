@@ -157,7 +157,6 @@ WindowManager::WindowManager(int argc, char** argv)
   XChangeWindowAttributes(dpy, root, CWEventMask, &sattr);
 
   queryWindowTree();
-
   doEventLoop();
 }
 
@@ -202,7 +201,6 @@ void WindowManager::addClient(Window w)
   queryClientName(c);
 
   XGetTransientForHint(dpy, c->window, &c->trans);
-
   XGetWindowAttributes(dpy, c->window, &attr);
 
   if (attr.map_state == IsViewable) c->ignore_unmap++;
@@ -236,11 +234,8 @@ void WindowManager::addClient(Window w)
   }
 
   gravitateClient(c, Gravity::APPLY);
-
   reparentClient(c);
-
-  unhideClient(c);
-    
+  unhideClient(c); 
   setXFocus(c);
 
   XSync(dpy, False);
@@ -763,6 +758,8 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
 
   int in_box = (ev->x >= c->width - theight) && (ev->y <= theight);
 
+  //printf("in_box = %d", in_box);
+
   // Used to compute the pointer position on click
   // used in the motion handler when doing a window move.
   c->old_cx = c->x;
@@ -780,16 +777,10 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
     {
       if (ev->type == ButtonPress)
       {
-        if(ev->window == c->window || ev->subwindow == c->window)
-          XRaiseWindow(dpy, c->frame);
+        XRaiseWindow(dpy, c->frame);
 
-        if (ev->window == c->title)
-        {
-          if (in_box)
+        if (ev->window == c->title && in_box)
             sendWMDelete(c->window);
-          else
-            XRaiseWindow(dpy, c->frame);
-        }
       }
 
       if (ev->type == ButtonRelease)
@@ -821,49 +812,41 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
 
   case Button2:
     {
-      if(ev->window == c->title)
+      if(ev->type == ButtonPress &&
+         ev->window == c->title && 
+         in_box) 
       {
-        if(in_box)
-        {
-          if(ev->type == ButtonPress)
-          {
-            if(c->is_shaded)
-              shadeClient(c);
-
-            XRaiseWindow(dpy, c->frame);
-          }
-        }
+        if(c->is_shaded)
+          shadeClient(c);
+          
+        XRaiseWindow(dpy, c->frame);
       }
 
       if(ev->type == ButtonRelease)
-          shadeClient(c);
+        shadeClient(c);
     }
     break;
 
   case Button3:
     {
-      if(ev->window == c->title)
+      if(ev->type == ButtonRelease &&
+         ev->window == c->title &&
+         c->is_being_resized)
       {
-        if (ev->type == ButtonRelease)
-        {
-          if(c->is_being_resized)
-          {
-            drawClientOutline(c);
-            c->do_drawoutline_once=false;
-            c->is_being_resized=false;
+        drawClientOutline(c);
+        c->do_drawoutline_once=false;
+        c->is_being_resized=false;
 
-            XResizeWindow(dpy, c->frame, c->width, c->height + theight);
-            XResizeWindow(dpy, c->title, c->width, theight);
-            XResizeWindow(dpy, c->window, c->width, c->height);
+        XResizeWindow(dpy, c->frame, c->width, c->height + theight);
+        XResizeWindow(dpy, c->title, c->width, theight);
+        XResizeWindow(dpy, c->window, c->width, c->height);
 
-            sendClientConfig(c);
+        sendClientConfig(c);
 
-            XUngrabServer(dpy);
-            XSync(dpy, False);
+        XUngrabServer(dpy);
+        XSync(dpy, False);
 
-            return;
-          }
-        }
+        return;
       }
     }
     break;
