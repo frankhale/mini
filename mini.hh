@@ -1,5 +1,5 @@
 // A new window manager based off my other window manager aewm++
-// Copyright (C) 2010-2012 Frank Hale <frankhale@gmail.com>
+// Copyright (C) 2010-2014 Frank Hale <frankhale@gmail.com>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,12 +19,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 21 August 2012
+// Updated: 31 December 2013
 
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 21 August 2012 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 31 December 2013 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
@@ -211,9 +211,7 @@ private:
   void addClient(Window w);
   void removeClient(Client* c);
   Client* findClient(Window w);
-
   void setXFocus(Client *c);
-
   void setClientFocus(Client* c, bool focus);
   void hideClient(Client* c);
   void unhideClient(Client* c);
@@ -230,9 +228,7 @@ private:
   void gravitateClient(Client* c, Gravity multiplier);
   void setClientShape(Client* c);
   void queryClientName(Client* c);
-
   void forkExec(std::string cmd);
-
   void unfocusAnyStrayClients();
   void focusPreviousWindowInStackingOrder();
   long getWMState(Window window);

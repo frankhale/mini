@@ -1,5 +1,5 @@
 // A new window manager based off my other window manager aewm++
-// Copyright (C) 2010-2012 Frank Hale <frankhale@gmail.com>
+// Copyright (C) 2010-2014 Frank Hale <frankhale@gmail.com>
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 22 August 2012
+// Date: 31 December 2013
 
 #include "mini.hh"
 
@@ -41,13 +41,10 @@ void WindowManager::ungrabKeys(Window w)
 
 WindowManager::WindowManager(int argc, char** argv)
 {
-  if(argc>=2)
-  {
-    if(strcmp(argv[1], "--version")==0)
-    {
-      std::cout << VERSION_STRING << std::endl;
-      exit(0);
-    }
+  if(argc>=2 && strcmp(argv[1], "--version")==0)
+  { 
+    std::cout << VERSION_STRING << std::endl;
+    exit(0);
   }
     
   int dummy;     // not used but needed to satisfy XShapeQueryExtension call
@@ -175,9 +172,10 @@ void WindowManager::queryWindowTree()
     if (!attr.override_redirect && attr.map_state == IsViewable)
       addClient(wins[i]);
   }
-  XFree(wins);
 
+  XFree(wins);
   XMapWindow(dpy, _button_proxy_win);
+
   grabKeys(_button_proxy_win);
   XSetInputFocus(dpy, _button_proxy_win, RevertToNone, CurrentTime);
 }
@@ -225,6 +223,7 @@ void WindowManager::addClient(Window w)
   {
     if(hints->flags & InputHint)
       c->should_takefocus=!hints->input;
+
     if (hints->flags & StateHint)
      setWMState(c->window, hints->initial_state);
     else
@@ -254,7 +253,6 @@ void WindowManager::removeClient(Client* c)
   gravitateClient(c, Gravity::REMOVE);
   
   XReparentWindow(dpy, c->window, root, c->x, c->y);
-
   XDestroyWindow(dpy, c->title);
   XDestroyWindow(dpy, c->frame);
 
@@ -599,11 +597,8 @@ void WindowManager::handleDefaultEvent(XEvent *ev)
 {
   Client* c = findClient(ev->xany.window);
 
-  if(c)
-  {
-    if (shape && ev->type == shape_event)
-      handleClientShapeChange((XShapeEvent *)ev, c);
-  }
+  if(c && shape && ev->type == shape_event)
+    handleClientShapeChange((XShapeEvent *)ev, c);
 }
 
 void WindowManager::forkExec(std::string cmd)
@@ -758,8 +753,6 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
 
   int in_box = (ev->x >= c->width - theight) && (ev->y <= theight);
 
-  //printf("in_box = %d", in_box);
-
   // Used to compute the pointer position on click
   // used in the motion handler when doing a window move.
   c->old_cx = c->x;
@@ -859,14 +852,10 @@ void WindowManager::handleClientConfigureRequest(XConfigureRequestEvent *ev, Cli
 
   gravitateClient(c, Gravity::REMOVE);
 
-  if (ev->value_mask & CWX)
-    c->x = ev->x;
-  if (ev->value_mask & CWY)
-    c->y = ev->y;
-  if (ev->value_mask & CWWidth)
-    c->width = ev->width;
-  if (ev->value_mask & CWHeight)
-    c->height = ev->height;
+  if (ev->value_mask & CWX) c->x = ev->x;
+  if (ev->value_mask & CWY) c->y = ev->y;
+  if (ev->value_mask & CWWidth) c->width = ev->width;
+  if (ev->value_mask & CWHeight) c->height = ev->height;
 
   gravitateClient(c, Gravity::APPLY);
 
@@ -943,8 +932,7 @@ void WindowManager::handleClientExposeEvent(XExposeEvent *ev, Client* c)
 }
 
 void WindowManager::handleClientFocusInEvent(XFocusChangeEvent *ev, Client* c)
-{
-  
+{ 
   setClientFocus(c, true);
 }
 
@@ -1607,11 +1595,8 @@ void WindowManager::focusPreviousWindowInStackingOrder()
     {
       c = findClient(wins[i]);
 
-      if(c)
-      {
-        if(c->has_title)
-          client_list_for_current_desktop.push_back(c);
-      }
+      if(c && c->has_title)
+        client_list_for_current_desktop.push_back(c);
     }
 
     if(client_list_for_current_desktop.size())
@@ -1620,7 +1605,7 @@ void WindowManager::focusPreviousWindowInStackingOrder()
 
       iter--;
 
-      if( (*iter) )
+      if((*iter))
       {
         Client* c = findClient((*iter)->window);
         
