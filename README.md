@@ -21,7 +21,7 @@ Middle click on the title bar to shade the window.
 
 NOTE: mini does not implement the extended window manager hints
 
-# Backstory 
+### Backstory 
 
 Just to clear LICENSING up since this is based off aewm++ and ultimately aewm. 
 Way back when I started aewm++ I asked Decklin Foster if he mind if I released 
