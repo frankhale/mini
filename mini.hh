@@ -24,7 +24,7 @@
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 31 December 2013 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 1 January 2014 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
@@ -50,8 +50,8 @@ enum class ResizeMode { PIXELS = 0, INCREMENTS = 1 };
 enum class WindowPlacement { MOUSE = 0, RANDOM = 1 };
 
 #define DEFAULT_FONT                "Fixed"
-#define DEFAULT_FOREGROUND_COLOR    "#000000"
-#define DEFAULT_BACKGROUND_COLOR    "#999999"
+#define DEFAULT_FOREGROUND_COLOR    "#000000" // Window title font color
+#define DEFAULT_BACKGROUND_COLOR    "#999999" // Window title background color
 #define DEFAULT_FOCUS_COLOR         "#dddddd"
 #define DEFAULT_BORDER_COLOR        "#000000"
 #define FOCUSED_BORDER_COLOR        "#000000"
@@ -74,9 +74,7 @@ enum class WindowPlacement { MOUSE = 0, RANDOM = 1 };
 int handleXError(Display *dpy, XErrorEvent *e);
 
 class WindowManager {
-/* Private Member Variables */
 private:
-
   struct Client {
     Window window;
     Window frame;
@@ -139,10 +137,10 @@ private:
   GC unfocused_gc;
   GC focused_title_gc;
 
-  XColor fg; // foreground color
-  XColor bg; // background color
-  XColor bd; // border color
-  XColor fc; // focus color
+  XColor fg;
+  XColor bg;
+  XColor bd;
+  XColor fc;
   XColor focused_border;
   XColor unfocused_border;
 
@@ -170,8 +168,7 @@ private:
   Atom atom_wm_delete;
   Atom atom_wm_takefocus;
 
-
-  /* Private Member Functions */
+  /* Functions */
 
   void cleanup();
   void doEventLoop();

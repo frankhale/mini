@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 31 December 2013
+// Date: 1 January 2014
 
 #include "mini.hh"
 
@@ -41,12 +41,6 @@ void WindowManager::ungrabKeys(Window w)
 
 WindowManager::WindowManager(int argc, char** argv)
 {
-  if(argc>=2 && strcmp(argv[1], "--version")==0)
-  { 
-    std::cout << VERSION_STRING << std::endl;
-    exit(0);
-  }
-    
   int dummy;     // not used but needed to satisfy XShapeQueryExtension call
   XColor dummyc; // not used but needed to satisfy XAllocNamedColor call
   
@@ -98,9 +92,9 @@ WindowManager::WindowManager(int argc, char** argv)
   // SET UP ATOMS
   atom_wm_state       = XInternAtom(dpy, "WM_STATE", False);
   atom_wm_change_state  = XInternAtom(dpy, "WM_CHANGE_STATE", False);
-  atom_wm_protos       = XInternAtom(dpy, "WM_PROTOCOLS", True);
+  atom_wm_protos       = XInternAtom(dpy, "WM_PROTOCOLS", False);
   atom_wm_delete       = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
-  atom_wm_takefocus    = XInternAtom(dpy, "WM_TAKE_FOCUS", True);
+  atom_wm_takefocus    = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 
   XSetWindowAttributes pattr;
   pattr.override_redirect=True;
@@ -270,14 +264,12 @@ WindowManager::Client* WindowManager::findClient(Window w)
 {
   if(client_list.size())
   {
-    std::list<Client*>::iterator iter = client_list.begin();
-
-    for(; iter != client_list.end(); iter++)
+    for(auto c : client_list)
     {
-      if (w == (*iter)->title  ||
-          w == (*iter)->frame  ||
-          w == (*iter)->window)
-        return (*iter);
+      if(w == c->title ||
+         w == c->frame ||
+         w == c->window)
+          return c;
     }
   }
 
@@ -380,14 +372,14 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
 
   if(c && c->has_title)
   {
-    if((ev->xbutton.button == Button1) &&
-        (ev->xbutton.type==ButtonPress) &&
-        (ev->xbutton.state==Mod1Mask)   &&
-        (c->frame == ev->xbutton.window)
-      )
-
+    if(ev->xbutton.button == Button1  &&
+       ev->xbutton.type==ButtonPress  &&
+       ev->xbutton.state==Mod1Mask    &&
+       c->frame == ev->xbutton.window)
+    {
       if(!XGrabPointer(dpy, c->frame, False, PointerMotionMask|ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, move_curs, CurrentTime) == GrabSuccess)
         return;
+    }
   }
 
   switch (focus_model)
@@ -427,9 +419,8 @@ void WindowManager::handleButtonReleaseEvent(XEvent *ev)
     XUngrabPointer(dpy, CurrentTime);
     handleClientButtonEvent(&ev->xbutton, c);
   }
-  else
+  else if (ev->xbutton.window==root && ev->xbutton.button==Button3)
   {
-    if (ev->xbutton.window==root && ev->xbutton.button==Button3)
       forkExec(DEFAULT_CMD);
   }
 }
@@ -439,7 +430,9 @@ void WindowManager::handleConfigureRequestEvent(XEvent *ev)
   Client* c = findClient(ev->xconfigurerequest.window);
 
   if(c)
+  {
     handleClientConfigureRequest(&ev->xconfigurerequest, c);
+  }
   else
   {
     XWindowChanges wc;
@@ -509,7 +502,9 @@ void WindowManager::handleEnterNotifyEvent(XEvent *ev)
         focused_client = c;
       }
       else
+      {
         XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+      }
     break;
 
     case FocusMode::SLOPPY:
@@ -531,19 +526,18 @@ void WindowManager::handleFocusInEvent(XEvent *ev)
   if((ev->xfocus.mode==NotifyGrab) || (ev->xfocus.mode==NotifyUngrab))
     return;
 
-  std::list<Window>::iterator iter;
-  for(iter=client_window_list.begin(); iter != client_window_list.end(); iter++)
+  for(auto cw : client_window_list)
   {
-    if(ev->xfocus.window == (*iter))
+    if(ev->xfocus.window == cw)
     {
-      Client *c = findClient((*iter));
+      Client *c = findClient(cw);
 
       if(c)
       {
         unfocusAnyStrayClients();
         handleClientFocusInEvent(&ev->xfocus, c);
         focused_client = c;
-        grabKeys((*iter));
+        grabKeys(cw);
       }
     }
     else
@@ -556,17 +550,16 @@ void WindowManager::handleFocusInEvent(XEvent *ev)
 
 void WindowManager::handleFocusOutEvent(XEvent *ev)
 {
-  std::list<Window>::iterator iter;
-  for(iter=client_window_list.begin(); iter != client_window_list.end(); iter++)
+  for(auto cw : client_window_list)
   {
-    if(ev->xfocus.window == (*iter))
+    if(ev->xfocus.window == cw)
     {
-      Client *c = findClient( (*iter) );
+      Client *c = findClient(cw);
 
       if(c)
       {
         focused_client = NULL;
-        ungrabKeys( (*iter) );
+        ungrabKeys(cw);
         return;
       }
     }
@@ -606,12 +599,10 @@ void WindowManager::forkExec(std::string cmd)
   if(! (cmd.length()>0))
     return;
 
-  switch(fork())
-  {
-    case 0:
-      execlp("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
-    break;
-  }
+  auto result = fork();
+
+  if(result == 0)
+    execlp("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
 }
 
 void WindowManager::restart()
@@ -637,6 +628,7 @@ void WindowManager::cleanup()
 
   // Preserve stacking order when removing the clientfrom the list.
   XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
+
   for (i = 0; i < nwins; i++)
   {
     c = findClient(wins[i]);
@@ -662,6 +654,7 @@ void WindowManager::cleanup()
   XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
   XDestroyWindow(dpy, _button_proxy_win);
   ungrabKeys(root);
+
   XCloseDisplay(dpy);
 }
 
@@ -670,10 +663,8 @@ void WindowManager::unfocusAnyStrayClients()
   // To prevent two windows titlebars from being painted with the focus color we
   // will prevent that from happening by setting all windows to false.
 
-  std::list<Client*>::iterator iter;
-
-  for(iter=client_list.begin(); iter != client_list.end(); iter++)
-    setClientFocus((*iter), false);
+  for(auto c : client_list)
+    setClientFocus(c, false);
 }
 
 void WindowManager::getMousePosition(int *x, int *y)
@@ -721,13 +712,18 @@ void WindowManager::sendWMDelete(Window window)
   if (XGetWMProtocols(dpy, window, &protocols, &n))
   {
     for (i=0; i<n; i++)
+    {
       if (protocols[i] == atom_wm_delete)
         found++;
+    }
 
     XFree(protocols);
   }
 
-  (found) ? sendXMessage(window, atom_wm_protos, RevertToNone, atom_wm_delete) : XKillClient(dpy, window);
+  if (found) 
+    sendXMessage(window, atom_wm_protos, RevertToNone, atom_wm_delete);
+  else
+    XKillClient(dpy, window);
 }
 
 int WindowManager::sendXMessage(Window w, Atom a, long mask, long x)
@@ -1274,15 +1270,15 @@ void WindowManager::redrawClient(Client* c)
     switch(TEXT_JUSTIFY)
     {
      case JustifyMode::LEFT:
-       c->text_justify = SPACE;
+        c->text_justify = SPACE;
       break;
 
      case JustifyMode::CENTER:
-      c->text_justify = ( (c->width / 2) - (c->text_width / 2) );
+        c->text_justify = ((c->width / 2) - (c->text_width / 2));
       break;
 
      case JustifyMode::RIGHT:
-      c->text_justify = c->width - c->text_width - 25;
+        c->text_justify = c->width - c->text_width - 25;
       break;
     }
 
@@ -1583,12 +1579,11 @@ void WindowManager::focusPreviousWindowInStackingOrder()
   Window dummyw1, dummyw2, *wins;
   Client *c=NULL;
 
-  XSetInputFocus(dpy, _button_proxy_win, RevertToNone, CurrentTime);
-
-  XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
-  
   if(client_list.size())
   {
+    XSetInputFocus(dpy, _button_proxy_win, RevertToNone, CurrentTime);
+    XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
+
     std::list<Client*> client_list_for_current_desktop;
 
     for (unsigned int i = 0; i < nwins; i++)
@@ -1613,15 +1608,11 @@ void WindowManager::focusPreviousWindowInStackingOrder()
           setXFocus(c);
 
         client_list_for_current_desktop.clear();
-
-        XFree(wins);
-
-        return;
       }
     }
-  }
 
-  XFree(wins);
+    XFree(wins);
+  }
 }
 
 void WindowManager::queryClientName(Client* c)
@@ -1633,9 +1624,7 @@ void WindowManager::queryClientName(Client* c)
   if(name)
   {
     c->name=name;
-
     XTextExtents(font, c->name.c_str(), c->name.length(), &c->direction, &c->ascent, &c->descent, &c->overall);
-
     c->text_width = c->overall.width;
 
     XFree(name);
@@ -1673,7 +1662,10 @@ int handleXError(Display *dpy, XErrorEvent *e)
 
 int main(int argc, char** argv)
 {
-  WindowManager mini(argc, argv);
-  
+  if(argc>=2 && strcmp(argv[1], "--version")==0)
+    std::cout << VERSION_STRING << std::endl;
+  else
+    WindowManager mini(argc, argv);
+
   return 0;
 }
