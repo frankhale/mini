@@ -1,5 +1,5 @@
 # A new window manager based off my other window manager aewm++ 
-# Copyright (C) 2010 Frank Hale <frankhale@gmail.com>
+# Copyright (C) 2010-2014 Frank Hale <frankhale@gmail.com>
 #
 # aewm++ can be found here: http://code.google.com/p/aewmpp/
 #
@@ -21,7 +21,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Started: 28 January 2010 
-# Date: 30 May 2010
+# Date: 1 January 2014
+
 CC = clang++
 ADDITIONAL_CFLAGS = -ggdb -O2 -Wall -std=c++11 -Wc++11-extensions
 
@@ -29,9 +30,7 @@ prefix   =
 INCLUDES = -I$/usr/X11R6
 LDPATH   = -L/usr/X11R6/lib
 LIBS     = -lXext -lX11
-
 HEADERS  = mini.hh 
-
 OBJS     = mini.o 	
 
 all: mini
