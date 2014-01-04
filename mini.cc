@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 1 January 2014
+// Date: 4 January 2014
 
 #include "mini.hh"
 
@@ -46,8 +46,6 @@ WindowManager::WindowManager(int argc, char** argv)
   
   XGCValues gv;
   XSetWindowAttributes sattr;
-  focused_client=NULL;
-  focus_model = DEFAULT_FOCUS_MODEL;
 
   wm = this;
 
@@ -185,8 +183,6 @@ void WindowManager::addClient(Window w)
   Client *c = new Client();
   client_list.push_back(c);
   XGrabServer(dpy);
-
-  initializeClient(c);
 
   c->window = w;
 
@@ -788,9 +784,7 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
         if(ev->time-c->last_button1_time<250)
         {
           maximizeClient(c);
-
           c->last_button1_time=0;
-
           return;
         }
         else
@@ -836,6 +830,19 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
         XSync(dpy, False);
 
         return;
+      }
+      else if (ev->type == ButtonRelease &&
+               ev->window == c->title)
+      {
+        if(ev->time-c->last_button1_time<250)
+        {
+          shadeClient(c);
+          c->last_button1_time=0;
+          return;
+        }
+        else
+          c->last_button1_time=ev->time;
+
       }
     }
     break;
@@ -1205,45 +1212,6 @@ void WindowManager::maximizeClient(Client* c)
   sendClientConfig(c);
 }
 
-void WindowManager::initializeClient(Client* c)
-{
-  c->window = None;
-  c->frame = None;
-  c->title = None;
-  c->trans = None;
-  c->x = 0;
-  c->y = 0;
-  c->old_x = 0;
-  c->old_y = 0;
-  c->old_cx = 0;
-  c->old_cy = 0;
-  c->pointer_x = 0;
-  c->pointer_y = 0;
-  c->width = 1;
-  c->height = 1;
-  c->old_width = 1;
-  c->old_height = 1;
-  c->ignore_unmap = 0;
-  c->last_button1_time = 0;
-  c->direction = 0;
-  c->ascent = 0;
-  c->descent = 0;
-  c->text_width = 0;
-  c->text_justify = 0;
-  c->has_title = true;
-  c->has_border = true;
-  c->button_pressed = false;
-  c->has_been_shaped = false;
-  c->has_focus = false;
-  c->is_shaded = false;
-  c->is_maximized = false;
-  c->is_visible = false;
-  c->is_being_dragged = false;
-  c->do_drawoutline_once = false;
-  c->is_being_resized = false;
-  c->should_takefocus = false;
-}
-
 void WindowManager::redrawClient(Client* c)
 {
   if (!c->has_title)
@@ -1466,11 +1434,8 @@ void WindowManager::reparentClient(Client* c)
   }
 
   XChangeWindowAttributes(dpy, c->window, CWDontPropagate, &pattr);
-
   XSelectInput(dpy, c->window, FocusChangeMask|PropertyChangeMask);
-
   XReparentWindow(dpy, c->window, c->frame, 0, theight);
-
   XGrabButton(dpy,
               Button1,
               AnyModifier,

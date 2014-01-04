@@ -19,12 +19,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 31 December 2013
+// Updated: 4 January 2013
 
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 1 January 2014 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 3 January 2014 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
@@ -76,59 +76,58 @@ int handleXError(Display *dpy, XErrorEvent *e);
 class WindowManager {
 private:
   struct Client {
-    Window window;
-    Window frame;
-    Window title;
-    Window trans;
+    Window window = None;
+    Window frame = None;
+    Window title = None;
+    Window trans = None;
 
-    bool has_focus;
-    bool has_title;
-    bool has_border;
-    bool is_being_dragged;
-    bool is_being_resized;
-    bool do_drawoutline_once;
+    bool has_focus = false;
+    bool has_title = true;
+    bool has_border = true;
+    bool is_being_dragged = false;
+    bool is_being_resized = false;
+    bool do_drawoutline_once = false;
+    bool is_shaded = false;
+    bool is_maximized = false;
+    bool is_visible = false;
+    bool has_been_shaped = false;
 
-    bool is_shaded;
-    bool is_maximized;
-    bool is_visible;
-    bool has_been_shaped;
+    bool button_pressed = false;
+    Time last_button1_time = 0;
+    int ignore_unmap = 0;
 
-    bool button_pressed;
-    Time last_button1_time;
-    int ignore_unmap;
+    XSizeHints *size = NULL;
+    int border_width = 1;
+    int x = 0;
+    int y = 0;
+    int width = 1;
+    int height = 1;
 
-    XSizeHints *size;
-    int border_width;
-    int x;
-    int y;
-    int width;
-    int height;
+    int old_x = 0;
+    int old_y = 0;
+    int old_width = 0;
+    int old_height = 0;
+    int pointer_x = 0;
+    int pointer_y = 0;
+    int old_cx = 0;
+    int old_cy = 0;
 
-    int old_x;
-    int old_y;
-    int old_width;
-    int old_height;
-    int pointer_x;
-    int pointer_y;
-    int old_cx;
-    int old_cy;
-
-    std::string name;
+    std::string name = "unknown";
     XCharStruct overall;
-    int direction;
-    int ascent;
-    int descent;
-    int text_width;
-    int text_justify;
+    int direction = 0;
+    int ascent = 0;
+    int descent = 0;
+    int text_width = 0;
+    int text_justify = 0;
 
-    bool should_takefocus;
+    bool should_takefocus = false;
   };
   
   std::string command_line;
   std::list<Client*> client_list;
   std::list<Window> client_window_list;
 
-  Client* focused_client;
+  Client* focused_client = NULL;
   XFontStruct *font;
 
   GC invert_gc;
@@ -153,12 +152,12 @@ private:
 
   bool random_window_placement;
 
-  int screen;
-  int xres;
-  int yres;
-  int shape;
-  int shape_event;
-  FocusMode focus_model;
+  int screen = 0;
+  int xres = 0;
+  int yres = 0;
+  int shape = 0;
+  int shape_event = 0;
+  FocusMode focus_model = DEFAULT_FOCUS_MODEL;
 
   static KeySym alt_keys[];
 
@@ -214,7 +213,6 @@ private:
   void unhideClient(Client* c);
   void shadeClient(Client* c);
   void maximizeClient(Client* c);
-  void initializeClient(Client*c);
   void redrawClient(Client* c);
   void drawClientOutline(Client* c);
   int getClientIncsize(Client* c, int *x_ret, int *y_ret, ResizeMode mode);
