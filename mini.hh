@@ -98,7 +98,7 @@ private:
 
     XSizeHints *size = NULL;
     int border_width = 1;
-    int x = 0;4
+    int x = 0;
     int y = 0;
     int width = 1;
     int height = 1;
