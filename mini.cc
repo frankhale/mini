@@ -373,7 +373,9 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
        ev->xbutton.state==Mod1Mask    &&
        c->frame == ev->xbutton.window)
     {
-      if(!XGrabPointer(dpy, c->frame, False, PointerMotionMask|ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, move_curs, CurrentTime) == GrabSuccess)
+      if(!(XGrabPointer(dpy, c->frame, False,
+        PointerMotionMask|ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None,
+        move_curs, CurrentTime) == GrabSuccess))
         return;
     }
   }
@@ -595,9 +597,7 @@ void WindowManager::forkExec(std::string cmd)
   if(! (cmd.length()>0))
     return;
 
-  auto result = fork();
-
-  if(result == 0)
+  if(fork() == 0)
     execlp("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
 }
 
@@ -1125,7 +1125,6 @@ void WindowManager::unhideClient(Client* c)
   XMapRaised(dpy, c->frame);
 
   setWMState(c->window, NormalState);
-
   setXFocus(c);
 
   c->is_visible=true;

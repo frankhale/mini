@@ -4,7 +4,7 @@ mini is a window manager for X11 and is a stripped down lean version of aewm++
 
 aewm++ can be found at: https://github.com/frankhale/aewmpp
 
-Frank Hale <frankhale@gmail.com>
+<img src="mini.png" alt="mini screenshot" />
 
 ###Usage
 
@@ -21,3 +21,9 @@ Middle click on the title bar to shade the window.
 ###License
 
 GPL 3
+
+##Author
+
+Frank Hale <frankhale@gmail.com>  
+30 May 2014
+

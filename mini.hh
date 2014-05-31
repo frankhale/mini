@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 4 January 2013
+// Updated: 4 January 2014
 
 #ifndef __MINI_H__
 #define __MINI_H__
@@ -98,7 +98,7 @@ private:
 
     XSizeHints *size = NULL;
     int border_width = 1;
-    int x = 0;
+    int x = 0;4
     int y = 0;
     int width = 1;
     int height = 1;
