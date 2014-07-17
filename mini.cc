@@ -131,8 +131,6 @@ WindowManager::WindowManager(int argc, char** argv)
                      ButtonPressMask          |
                      ButtonReleaseMask        |
                      FocusChangeMask          |
-                     EnterWindowMask          |
-                     LeaveWindowMask          |
                      PropertyChangeMask       |
                      ButtonMotionMask         ;
 

@@ -190,7 +190,6 @@ private:
   void handleClientUnmapEvent(XUnmapEvent *ev, Client* c);
   void handleClientDestroyEvent(XDestroyWindowEvent *ev, Client* c);
   void handleClientPropertyChange(XPropertyEvent *ev, Client* c);
-  void handleClientEnterEvent(XCrossingEvent *ev, Client* c);
   void handleClientExposeEvent(XExposeEvent *ev, Client* c);
   void handleClientFocusInEvent(XFocusChangeEvent *ev, Client* c);
   void handleClientMotionNotifyEvent(XMotionEvent *ev, Client* c);
