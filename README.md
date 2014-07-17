@@ -16,7 +16,7 @@ on it and you can resize the window. Left click on it and you close the app.
 
 Middle click on the title bar to shade the window.
 
-*NOTE:* mini does not implement the extended window manager hints
+**NOTE: mini does not implement the extended window manager hints**
 
 ###License
 
@@ -25,5 +25,5 @@ GPL 3
 ##Author
 
 Frank Hale <frankhale@gmail.com>  
-30 May 2014
+16 July 2014
 

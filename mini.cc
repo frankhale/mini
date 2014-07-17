@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 4 January 2014
+// Date: 16 July 2014
 
 #include "mini.hh"
 
@@ -56,13 +56,6 @@ WindowManager::WindowManager(int argc, char** argv)
   signal(SIGTERM, sigHandler);
   signal(SIGHUP, sigHandler);
   signal(SIGCHLD, sigHandler);
-
-  WindowPlacement window_placement = DEFAULT_WINDOW_PLACEMENT;
-
-  if(window_placement == WindowPlacement::MOUSE)
-    random_window_placement = false;
-  else if(window_placement == WindowPlacement::RANDOM)
-    random_window_placement = true;
 
   dpy = XOpenDisplay(getenv("DISPLAY"));
 
@@ -314,10 +307,6 @@ void WindowManager::doEventLoop()
       handleDestroyNotifyEvent(&ev);
       break;
 
-    case EnterNotify:
-      handleEnterNotifyEvent(&ev);
-      break;
-
     case FocusIn:
       handleFocusInEvent(&ev);
       break;
@@ -380,31 +369,15 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
     }
   }
 
-  switch (focus_model)
+  if(c)
   {
-    case FocusMode::FOLLOW:
-    case FocusMode::SLOPPY:
-    if(c)
+    if(c != focused_client)
     {
-      handleClientButtonEvent(&ev->xbutton, c);
+      setXFocus(c);
       focused_client = c;
     }
-    break;
 
-    case FocusMode::CLICK:
-    if(c)
-    {
-      // if this is the first time the client window's clicked, focus it
-      if(c != focused_client)
-      {
-        //XSetInputFocus(dpy, c->window, RevertToPointerRoot, CurrentTime);
-        setXFocus(c);
-        focused_client = c;
-      }
-
-      handleClientButtonEvent(&ev->xbutton, c);
-    }
-    break;
+    handleClientButtonEvent(&ev->xbutton, c);
   }
 }
 
@@ -487,38 +460,6 @@ void WindowManager::handleDestroyNotifyEvent(XEvent *ev)
   XSendEvent(dpy, _button_proxy_win, False, SubstructureNotifyMask, ev);
 }
 
-void WindowManager::handleEnterNotifyEvent(XEvent *ev)
-{
-  Client* c = findClient(ev->xcrossing.window);
-
-  switch (focus_model)
-  {
-    case FocusMode::FOLLOW:
-      if(c)
-      {
-        handleClientEnterEvent(&ev->xcrossing, c);
-        focused_client = c;
-      }
-      else
-      {
-        XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
-      }
-    break;
-
-    case FocusMode::SLOPPY:
-      // if the pointer's not on a client now, don't change focus
-      if(c)
-      {
-        handleClientEnterEvent(&ev->xcrossing, c);
-        focused_client = c;
-      }
-      break;
-
-    case FocusMode::CLICK:
-      break;
-  }
-}
-
 void WindowManager::handleFocusInEvent(XEvent *ev)
 {
   if((ev->xfocus.mode==NotifyGrab) || (ev->xfocus.mode==NotifyUngrab))
@@ -537,11 +478,6 @@ void WindowManager::handleFocusInEvent(XEvent *ev)
         focused_client = c;
         grabKeys(cw);
       }
-    }
-    else
-    {
-      if(ev->xfocus.window==root && focus_model==FocusMode::FOLLOW)
-        unfocusAnyStrayClients();
     }
   }
 }
@@ -563,9 +499,7 @@ void WindowManager::handleFocusOutEvent(XEvent *ev)
     }
   }
 
-  if((focus_model == FocusMode::CLICK) ||
-     (focus_model == FocusMode::SLOPPY))
-    focusPreviousWindowInStackingOrder();
+  focusPreviousWindowInStackingOrder();
 }
 
 void WindowManager::handlePropertyNotifyEvent(XEvent *ev)
@@ -920,12 +854,6 @@ void WindowManager::handleClientPropertyChange(XPropertyEvent *ev, Client* c)
     XGetWMNormalHints(dpy, c->window, c->size, &dummy);
     break;
   }
-}
-
-void WindowManager::handleClientEnterEvent(XCrossingEvent *ev, Client* c)
-{
-  if(focus_model == FocusMode::FOLLOW)
-    setXFocus(c);
 }
 
 void WindowManager::handleClientExposeEvent(XExposeEvent *ev, Client* c)
@@ -1350,17 +1278,9 @@ void WindowManager::initClientPosition(Client* c)
 
         if(mouse_x && mouse_y)
         {
-          if(random_window_placement)
-          {
-            c->x = (rand() % (unsigned int) ((xres - c->width) * 0.94)) + ((unsigned int) (xres * 0.03));
-            c->y = (rand() % (unsigned int) ((yres - c->height) * 0.94)) + ((unsigned int) (yres * 0.03));
-          }
-          else
-          {
-            c->x = (int) (((long) (xres - c->width) * (long) mouse_x) / (long) xres);
-            c->y = (int) (((long) (yres - c->height - theight) * (long) mouse_y) / (long) yres);
-            c->y = (c->y<theight) ? theight : c->y;
-          }
+          c->x = (int) (((long) (xres - c->width) * (long) mouse_x) / (long) xres);
+          c->y = (int) (((long) (yres - c->height - theight) * (long) mouse_y) / (long) yres);
+          c->y = (c->y<theight) ? theight : c->y;
 
           gravitateClient(c, Gravity::REMOVE);
         }

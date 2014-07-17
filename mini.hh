@@ -19,12 +19,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 4 January 2014
+// Updated: 16 July 2014
 
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 3 January 2014 | http://github.com/frankhale | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 16 July 2014 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
@@ -44,10 +44,8 @@
 #include <iostream>
 
 enum class JustifyMode { LEFT, CENTER, RIGHT };
-enum class FocusMode { FOLLOW, SLOPPY, CLICK };
 enum class Gravity { APPLY = 1, REMOVE = -1 };
 enum class ResizeMode { PIXELS = 0, INCREMENTS = 1 };
-enum class WindowPlacement { MOUSE = 0, RANDOM = 1 };
 
 #define DEFAULT_FONT                "Fixed"
 #define DEFAULT_FOREGROUND_COLOR    "#000000" // Window title font color
@@ -66,8 +64,6 @@ enum class WindowPlacement { MOUSE = 0, RANDOM = 1 };
 #define SNAP                        5
 #define TEXT_JUSTIFY                JustifyMode::RIGHT
 #define WIRE_MOVE                   false
-#define DEFAULT_FOCUS_MODEL         FocusMode::CLICK
-#define DEFAULT_WINDOW_PLACEMENT    WindowPlacement::MOUSE
 #define TRANSIENT_WINDOW_HEIGHT     8
 #define ALT_KEY_COUNT               2
 
@@ -150,14 +146,11 @@ private:
   Window root;
   Window _button_proxy_win;
 
-  bool random_window_placement;
-
   int screen = 0;
   int xres = 0;
   int yres = 0;
   int shape = 0;
   int shape_event = 0;
-  FocusMode focus_model = DEFAULT_FOCUS_MODEL;
 
   static KeySym alt_keys[];
 
@@ -185,7 +178,6 @@ private:
   void handleMapRequestEvent(XEvent *ev);
   void handleUnmapNotifyEvent(XEvent *ev);
   void handleDestroyNotifyEvent(XEvent *ev);
-  void handleEnterNotifyEvent(XEvent *ev);
   void handleFocusInEvent(XEvent *ev);
   void handleFocusOutEvent(XEvent *ev);
   void handlePropertyNotifyEvent(XEvent *ev);
