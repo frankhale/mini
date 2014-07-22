@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 16 July 2014
+// Date: 21 July 2014
 
 #include "mini.hh"
 
@@ -87,11 +87,6 @@ WindowManager::WindowManager(int argc, char** argv)
   atom_wm_delete       = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
   atom_wm_takefocus    = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 
-  XSetWindowAttributes pattr;
-  pattr.override_redirect=True;
-  _button_proxy_win=XCreateSimpleWindow(dpy, root, -80, -80, 24, 24,0,0,0);
-  XChangeWindowAttributes(dpy, _button_proxy_win, CWOverrideRedirect, &pattr);
-
   // SETUP COLORS USED FOR WINDOW TITLE BARS and WINDOW BORDERS
   XAllocNamedColor(dpy, DefaultColormap(dpy, screen), DEFAULT_FOREGROUND_COLOR, &fg, &dummyc);
   XAllocNamedColor(dpy, DefaultColormap(dpy, screen), DEFAULT_BACKGROUND_COLOR, &bg, &dummyc);
@@ -136,6 +131,8 @@ WindowManager::WindowManager(int argc, char** argv)
 
   XChangeWindowAttributes(dpy, root, CWEventMask, &sattr);
 
+  grabKeys(root);
+
   queryWindowTree();
   doEventLoop();
 }
@@ -157,21 +154,17 @@ void WindowManager::queryWindowTree()
   }
 
   XFree(wins);
-  XMapWindow(dpy, _button_proxy_win);
-
-  grabKeys(_button_proxy_win);
-  XSetInputFocus(dpy, _button_proxy_win, RevertToNone, CurrentTime);
 }
 
 void WindowManager::addClient(Window w)
 {
   XWindowAttributes attr;
   XWMHints *hints;
-  long dummy;
 
   client_window_list.push_back(w);
 
-  Client *c = new Client();
+  std::shared_ptr<Client> c(new Client);
+
   client_list.push_back(c);
   XGrabServer(dpy);
 
@@ -190,7 +183,8 @@ void WindowManager::addClient(Window w)
   c->height = attr.height;
   c->border_width = attr.border_width;
   c->size = XAllocSizeHints();
-  
+
+  long dummy;
   XGetWMNormalHints(dpy, c->window, c->size, &dummy);
 
   c->old_x = c->x;
@@ -222,7 +216,7 @@ void WindowManager::addClient(Window w)
   XUngrabServer(dpy);
 }
 
-void WindowManager::removeClient(Client* c)
+void WindowManager::removeClient(std::shared_ptr<Client> c)
 {
   XGrabServer(dpy);
 
@@ -247,7 +241,7 @@ void WindowManager::removeClient(Client* c)
   client_list.remove(c);
 }
 
-WindowManager::Client* WindowManager::findClient(Window w)
+std::shared_ptr<WindowManager::Client> WindowManager::findClient(Window w)
 {
   if(client_list.size())
   {
@@ -260,7 +254,7 @@ WindowManager::Client* WindowManager::findClient(Window w)
     }
   }
 
-  return NULL;
+  return nullptr;
 }
 
 void WindowManager::doEventLoop()
@@ -330,7 +324,7 @@ void WindowManager::doEventLoop()
 
 void WindowManager::handleKeyPressEvent(XEvent *ev)
 {
-  KeySym ks = XkbKeycodeToKeysym(dpy, ev->xkey.keycode, 0, 1);
+  auto ks = XkbKeycodeToKeysym(dpy, ev->xkey.keycode, 0, 1);
 
   if (ks==NoSymbol)
     return;
@@ -351,7 +345,7 @@ void WindowManager::handleKeyPressEvent(XEvent *ev)
 
 void WindowManager::handleButtonPressEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xbutton.window);
+  auto c = findClient(ev->xbutton.window);
 
   if(c && c->has_title)
   {
@@ -360,9 +354,7 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
        ev->xbutton.state==Mod1Mask    &&
        c->frame == ev->xbutton.window)
     {
-      if(!(XGrabPointer(dpy, c->frame, False,
-        PointerMotionMask|ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None,
-        move_curs, CurrentTime) == GrabSuccess))
+      if(!(XGrabPointer(dpy, c->frame, False, PointerMotionMask|ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, move_curs, CurrentTime) == GrabSuccess))
         return;
     }
   }
@@ -381,7 +373,7 @@ void WindowManager::handleButtonPressEvent(XEvent *ev)
 
 void WindowManager::handleButtonReleaseEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xbutton.window);
+  auto c = findClient(ev->xbutton.window);
 
   if(c)
   {
@@ -390,13 +382,13 @@ void WindowManager::handleButtonReleaseEvent(XEvent *ev)
   }
   else if (ev->xbutton.window==root && ev->xbutton.button==Button3)
   {
-      forkExec(DEFAULT_CMD);
+    forkExec(DEFAULT_CMD);
   }
 }
 
 void WindowManager::handleConfigureRequestEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xconfigurerequest.window);
+  auto c = findClient(ev->xconfigurerequest.window);
 
   if(c)
   {
@@ -418,7 +410,7 @@ void WindowManager::handleConfigureRequestEvent(XEvent *ev)
 
 void WindowManager::handleMotionNotifyEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xmotion.window);
+  auto c = findClient(ev->xmotion.window);
 
   if(c)
     handleClientMotionNotifyEvent(&ev->xmotion, c);
@@ -426,7 +418,7 @@ void WindowManager::handleMotionNotifyEvent(XEvent *ev)
 
 void WindowManager::handleMapRequestEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xmaprequest.window);
+  auto c = findClient(ev->xmaprequest.window);
 
   if(c)
     handleClientMapRequest(&ev->xmaprequest, c);
@@ -436,26 +428,24 @@ void WindowManager::handleMapRequestEvent(XEvent *ev)
 
 void WindowManager::handleUnmapNotifyEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xunmap.window);
+  auto c = findClient(ev->xunmap.window);
 
   if(c)
   {
     handleClientUnmapEvent(&ev->xunmap, c);
-    focused_client = NULL;
+    focused_client = nullptr;
   }
 }
 
 void WindowManager::handleDestroyNotifyEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xdestroywindow.window);
+  auto c = findClient(ev->xdestroywindow.window);
 
   if(c)
   {
     handleClientDestroyEvent(&ev->xdestroywindow, c);
-    focused_client = NULL;
+    focused_client = nullptr;
   }
-
-  XSendEvent(dpy, _button_proxy_win, False, SubstructureNotifyMask, ev);
 }
 
 void WindowManager::handleFocusInEvent(XEvent *ev)
@@ -467,14 +457,13 @@ void WindowManager::handleFocusInEvent(XEvent *ev)
   {
     if(ev->xfocus.window == cw)
     {
-      Client *c = findClient(cw);
+      auto c = findClient(cw);
 
       if(c)
       {
         unfocusAnyStrayClients();
         handleClientFocusInEvent(&ev->xfocus, c);
         focused_client = c;
-        grabKeys(cw);
       }
     }
   }
@@ -486,12 +475,11 @@ void WindowManager::handleFocusOutEvent(XEvent *ev)
   {
     if(ev->xfocus.window == cw)
     {
-      Client *c = findClient(cw);
+      auto c = findClient(cw);
 
       if(c)
       {
         focused_client = NULL;
-        ungrabKeys(cw);
         return;
       }
     }
@@ -502,7 +490,7 @@ void WindowManager::handleFocusOutEvent(XEvent *ev)
 
 void WindowManager::handlePropertyNotifyEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xproperty.window);
+  auto c = findClient(ev->xproperty.window);
 
   if(c)
     handleClientPropertyChange(&ev->xproperty, c);
@@ -510,7 +498,7 @@ void WindowManager::handlePropertyNotifyEvent(XEvent *ev)
 
 void WindowManager::handleExposeEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xexpose.window);
+  auto c = findClient(ev->xexpose.window);
 
   if(c)
     handleClientExposeEvent(&ev->xexpose, c);
@@ -518,7 +506,7 @@ void WindowManager::handleExposeEvent(XEvent *ev)
 
 void WindowManager::handleDefaultEvent(XEvent *ev)
 {
-  Client* c = findClient(ev->xany.window);
+  auto c = findClient(ev->xany.window);
 
   if(c && shape && ev->type == shape_event)
     handleClientShapeChange((XShapeEvent *)ev, c);
@@ -536,7 +524,6 @@ void WindowManager::forkExec(std::string cmd)
 void WindowManager::restart()
 {
   cleanup();
-
   execl("/bin/sh", "sh", "-c", command_line.c_str(), (char *)NULL);
 }
 
@@ -552,7 +539,7 @@ void WindowManager::cleanup()
 
   unsigned int nwins, i;
   Window dummyw1, dummyw2, *wins;
-  Client* c;
+  std::shared_ptr<Client> c;
 
   // Preserve stacking order when removing the clientfrom the list.
   XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
@@ -565,7 +552,6 @@ void WindowManager::cleanup()
     {
       XMapWindow(dpy, c->window);
       removeClient(c);
-      delete c;
     }
   }
 
@@ -580,7 +566,6 @@ void WindowManager::cleanup()
   XFreeGC(dpy, focused_title_gc);
   XInstallColormap(dpy, DefaultColormap(dpy, screen));
   XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
-  XDestroyWindow(dpy, _button_proxy_win);
   ungrabKeys(root);
 
   XCloseDisplay(dpy);
@@ -611,9 +596,7 @@ long WindowManager::getWMState(Window window)
   unsigned long items_read, items_left;
   unsigned char *data, state = WithdrawnState;
 
-  if (XGetWindowProperty(dpy, window, atom_wm_state, 0L, 2L, False,
-                         atom_wm_state, &real_type, &real_format, &items_read, &items_left,
-                         &data) == Success && items_read)
+  if (XGetWindowProperty(dpy, window, atom_wm_state, 0L, 2L, False, atom_wm_state, &real_type, &real_format, &items_read, &items_left, &data) == Success && items_read)
   {
     state = *data;
     XFree(data);
@@ -668,7 +651,7 @@ int WindowManager::sendXMessage(Window w, Atom a, long mask, long x)
   return XSendEvent(dpy, w, False, mask, &e);
 }
 
-void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
+void WindowManager::handleClientButtonEvent(XButtonEvent *ev, std::shared_ptr<Client> c)
 {
   // Formula to tell if the pointer is in the little
   // box on the right edge of the window. This box is
@@ -781,7 +764,7 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, Client* c)
   }
 }
 
-void WindowManager::handleClientConfigureRequest(XConfigureRequestEvent *ev, Client* c)
+void WindowManager::handleClientConfigureRequest(XConfigureRequestEvent *ev, std::shared_ptr<Client> c)
 {
   int theight = getClientTitleHeight(c);
 
@@ -813,33 +796,25 @@ void WindowManager::handleClientConfigureRequest(XConfigureRequestEvent *ev, Cli
     setClientShape(c);
 }
 
-void WindowManager::handleClientMapRequest(XMapRequestEvent *ev, Client* c)
+void WindowManager::handleClientMapRequest(XMapRequestEvent *ev, std::shared_ptr<Client> c)
 {
   unhideClient(c);
 }
 
-void WindowManager::handleClientUnmapEvent(XUnmapEvent *ev, Client* c)
+void WindowManager::handleClientUnmapEvent(XUnmapEvent *ev, std::shared_ptr<Client> c)
 {
   if (! c->ignore_unmap)
-  {
     removeClient(c);
-    delete c;
-  }
 }
 
-void WindowManager::handleClientDestroyEvent(XDestroyWindowEvent *ev, Client* c)
+void WindowManager::handleClientDestroyEvent(XDestroyWindowEvent *ev, std::shared_ptr<Client> c)
 {
   if(c)
-  {
     removeClient(c);
-    delete c;
-  }
 }
 
-void WindowManager::handleClientPropertyChange(XPropertyEvent *ev, Client* c)
+void WindowManager::handleClientPropertyChange(XPropertyEvent *ev, std::shared_ptr<Client> c)
 {
-  long dummy;
-
   switch (ev->atom)
   {
   case XA_WM_NAME:
@@ -849,23 +824,24 @@ void WindowManager::handleClientPropertyChange(XPropertyEvent *ev, Client* c)
     break;
 
   case XA_WM_NORMAL_HINTS:
+    long dummy;
     XGetWMNormalHints(dpy, c->window, c->size, &dummy);
     break;
   }
 }
 
-void WindowManager::handleClientExposeEvent(XExposeEvent *ev, Client* c)
+void WindowManager::handleClientExposeEvent(XExposeEvent *ev, std::shared_ptr<Client> c)
 {
   if (ev->count == 0)
     redrawClient(c);
 }
 
-void WindowManager::handleClientFocusInEvent(XFocusChangeEvent *ev, Client* c)
+void WindowManager::handleClientFocusInEvent(XFocusChangeEvent *ev, std::shared_ptr<Client> c)
 { 
   setClientFocus(c, true);
 }
 
-void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, Client* c)
+void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_ptr<Client> c)
 {
   int nx=0, ny=0;
   int theight = getClientTitleHeight(c);
@@ -975,8 +951,8 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, Client* c)
             c->height=50;
         }
 
-        if (c->size->flags & PMaxSize)
-        {
+       if (c->size->flags & PMaxSize)
+       {
           if (c->width > c->size->max_width)
             c->width = c->size->max_width;
           if (c->height > c->size->max_height)
@@ -994,12 +970,12 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, Client* c)
   }
 }
 
-void WindowManager::handleClientShapeChange(XShapeEvent *ev, Client* c)
+void WindowManager::handleClientShapeChange(XShapeEvent *ev, std::shared_ptr<Client> c)
 {
   setClientShape(c);
 }
 
-void WindowManager::setClientFocus(Client* c, bool focus)
+void WindowManager::setClientFocus(std::shared_ptr<Client> c, bool focus)
 {
   c->has_focus=focus;
 
@@ -1021,7 +997,7 @@ void WindowManager::setClientFocus(Client* c, bool focus)
   }
 }
 
-void WindowManager::setXFocus(Client *c)
+void WindowManager::setXFocus(std::shared_ptr<Client> c)
 {
   if(c->should_takefocus)
     sendXMessage(c->window, atom_wm_protos, 0L, atom_wm_takefocus);
@@ -1029,7 +1005,7 @@ void WindowManager::setXFocus(Client *c)
     XSetInputFocus(dpy, c->window, RevertToPointerRoot, CurrentTime);
 }
 
-void WindowManager::hideClient(Client* c)
+void WindowManager::hideClient(std::shared_ptr<Client> c)
 {
   if (!c->ignore_unmap)
     c->ignore_unmap++;
@@ -1045,7 +1021,7 @@ void WindowManager::hideClient(Client* c)
   c->is_visible=false;
 }
 
-void WindowManager::unhideClient(Client* c)
+void WindowManager::unhideClient(std::shared_ptr<Client> c)
 {
   XMapSubwindows(dpy, c->frame);
   XMapRaised(dpy, c->frame);
@@ -1056,7 +1032,7 @@ void WindowManager::unhideClient(Client* c)
   c->is_visible=true;
 }
 
-void WindowManager::shadeClient(Client* c)
+void WindowManager::shadeClient(std::shared_ptr<Client> c)
 {
   int theight = getClientTitleHeight(c);
 
@@ -1074,7 +1050,7 @@ void WindowManager::shadeClient(Client* c)
   }
 }
 
-void WindowManager::maximizeClient(Client* c)
+void WindowManager::maximizeClient(std::shared_ptr<Client> c)
 {
   int theight = getClientTitleHeight(c);
 
@@ -1137,7 +1113,7 @@ void WindowManager::maximizeClient(Client* c)
   sendClientConfig(c);
 }
 
-void WindowManager::redrawClient(Client* c)
+void WindowManager::redrawClient(std::shared_ptr<Client> c)
 {
   if (!c->has_title)
     return;
@@ -1179,7 +1155,7 @@ void WindowManager::redrawClient(Client* c)
   }
 }
 
-void WindowManager::drawClientOutline(Client* c)
+void WindowManager::drawClientOutline(std::shared_ptr<Client> c)
 {
   int theight = getClientTitleHeight(c);
   int BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
@@ -1198,7 +1174,7 @@ void WindowManager::drawClientOutline(Client* c)
     XDrawRectangle(dpy, root, invert_gc, c->x + BW/2, c->y - theight + BW/2, c->width + BW, theight + BW);
 }
 
-int  WindowManager::getClientIncsize(Client* c, int *x_ret, int *y_ret, ResizeMode mode)
+int  WindowManager::getClientIncsize(std::shared_ptr<Client> c, int *x_ret, int *y_ret, ResizeMode mode)
 {
   int basex, basey;
 
@@ -1227,7 +1203,7 @@ int  WindowManager::getClientIncsize(Client* c, int *x_ret, int *y_ret, ResizeMo
   return 0;
 }
 
-void WindowManager::initClientPosition(Client* c)
+void WindowManager::initClientPosition(std::shared_ptr<Client> c)
 {
   int mouse_x=0, mouse_y=0;
   unsigned int w, h, border_width, depth;
@@ -1287,7 +1263,7 @@ void WindowManager::initClientPosition(Client* c)
   }
 }
 
-void WindowManager::reparentClient(Client* c)
+void WindowManager::reparentClient(std::shared_ptr<Client> c)
 {
   XSetWindowAttributes pattr;
 
@@ -1368,14 +1344,14 @@ void WindowManager::reparentClient(Client* c)
   XUngrabServer(dpy);
 }
 
-int WindowManager::getClientTitleHeight(Client* c)
+int WindowManager::getClientTitleHeight(std::shared_ptr<Client> c)
 {
   if (!c->has_title) return 0;
 
   return (c->trans) ? TRANSIENT_WINDOW_HEIGHT : (font->ascent + font->descent + SPACE);
 }
 
-void WindowManager::sendClientConfig(Client* c)
+void WindowManager::sendClientConfig(std::shared_ptr<Client> c)
 {
   XConfigureEvent ce;
 
@@ -1392,7 +1368,7 @@ void WindowManager::sendClientConfig(Client* c)
   XSendEvent(dpy, c->window, False, StructureNotifyMask, (XEvent *)&ce);
 }
 
-void WindowManager::gravitateClient(Client* c, Gravity multiplier)
+void WindowManager::gravitateClient(std::shared_ptr<Client> c, Gravity multiplier)
 {
   int dy = 0;
   int gravity = (c->size->flags & PWinGravity) ? c->size->win_gravity : NorthWestGravity;
@@ -1413,7 +1389,7 @@ void WindowManager::gravitateClient(Client* c, Gravity multiplier)
   c->y += (int)multiplier * dy;
 }
 
-void WindowManager::setClientShape(Client* c)
+void WindowManager::setClientShape(std::shared_ptr<Client> c)
 {
   int n=0, order=0;
   XRectangle temp, *dummy;
@@ -1459,14 +1435,13 @@ void WindowManager::focusPreviousWindowInStackingOrder()
 {
   unsigned int nwins;
   Window dummyw1, dummyw2, *wins;
-  Client *c=NULL;
+  std::shared_ptr<Client> c;
 
   if(client_list.size())
   {
-    XSetInputFocus(dpy, _button_proxy_win, RevertToNone, CurrentTime);
     XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
 
-    std::list<Client*> client_list_for_current_desktop;
+    std::list<std::shared_ptr<Client>> client_list_for_current_desktop;
 
     for (unsigned int i = 0; i < nwins; i++)
     {
@@ -1478,13 +1453,13 @@ void WindowManager::focusPreviousWindowInStackingOrder()
 
     if(client_list_for_current_desktop.size())
     {
-      std::list<Client*>::iterator iter = client_list_for_current_desktop.end();
+      std::list<std::shared_ptr<Client>>::iterator iter = client_list_for_current_desktop.end();
 
       iter--;
 
       if((*iter))
       {
-        Client* c = findClient((*iter)->window);
+        std::shared_ptr<Client> c = findClient((*iter)->window);
         
         if(c)
           setXFocus(c);
@@ -1497,7 +1472,7 @@ void WindowManager::focusPreviousWindowInStackingOrder()
   }
 }
 
-void WindowManager::queryClientName(Client* c)
+void WindowManager::queryClientName(std::shared_ptr<Client> c)
 {
   char* name=NULL;
 

@@ -19,12 +19,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 16 July 2014
+// Updated: 21 July 2014
 
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 16 July 2014 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 21 July 2014 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
@@ -42,6 +42,7 @@
 #include <string>
 #include <string.h>
 #include <iostream>
+#include <memory>
 
 enum class JustifyMode { LEFT, CENTER, RIGHT };
 enum class Gravity { APPLY = 1, REMOVE = -1 };
@@ -120,10 +121,10 @@ private:
   };
   
   std::string command_line;
-  std::list<Client*> client_list;
+  std::list<std::shared_ptr<Client>> client_list;
   std::list<Window> client_window_list;
 
-  Client* focused_client = NULL;
+  std::shared_ptr<Client> focused_client = nullptr;
   XFontStruct *font;
 
   GC invert_gc;
@@ -144,7 +145,6 @@ private:
 
   Display *dpy;
   Window root;
-  Window _button_proxy_win;
 
   int screen = 0;
   int xres = 0;
@@ -184,36 +184,36 @@ private:
   void handleExposeEvent(XEvent *ev);
   void handleDefaultEvent(XEvent *ev);
 
-  void handleClientButtonEvent(XButtonEvent *ev, Client* c);
-  void handleClientConfigureRequest(XConfigureRequestEvent *ev, Client* c);
-  void handleClientMapRequest(XMapRequestEvent *ev, Client* c);
-  void handleClientUnmapEvent(XUnmapEvent *ev, Client* c);
-  void handleClientDestroyEvent(XDestroyWindowEvent *ev, Client* c);
-  void handleClientPropertyChange(XPropertyEvent *ev, Client* c);
-  void handleClientExposeEvent(XExposeEvent *ev, Client* c);
-  void handleClientFocusInEvent(XFocusChangeEvent *ev, Client* c);
-  void handleClientMotionNotifyEvent(XMotionEvent *ev, Client* c);
-  void handleClientShapeChange(XShapeEvent *ev, Client* c);
+  void handleClientButtonEvent(XButtonEvent *ev, std::shared_ptr<Client> c);
+  void handleClientConfigureRequest(XConfigureRequestEvent *ev, std::shared_ptr<Client> c);
+  void handleClientMapRequest(XMapRequestEvent *ev, std::shared_ptr<Client> c);
+  void handleClientUnmapEvent(XUnmapEvent *ev, std::shared_ptr<Client> c);
+  void handleClientDestroyEvent(XDestroyWindowEvent *ev, std::shared_ptr<Client> c);
+  void handleClientPropertyChange(XPropertyEvent *ev, std::shared_ptr<Client> c);
+  void handleClientExposeEvent(XExposeEvent *ev, std::shared_ptr<Client> c);
+  void handleClientFocusInEvent(XFocusChangeEvent *ev, std::shared_ptr<Client> c);
+  void handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_ptr<Client> c);
+  void handleClientShapeChange(XShapeEvent *ev, std::shared_ptr<Client> c);
 
   void addClient(Window w);
-  void removeClient(Client* c);
-  Client* findClient(Window w);
-  void setXFocus(Client *c);
-  void setClientFocus(Client* c, bool focus);
-  void hideClient(Client* c);
-  void unhideClient(Client* c);
-  void shadeClient(Client* c);
-  void maximizeClient(Client* c);
-  void redrawClient(Client* c);
-  void drawClientOutline(Client* c);
-  int getClientIncsize(Client* c, int *x_ret, int *y_ret, ResizeMode mode);
-  void initClientPosition(Client* c);
-  void reparentClient(Client* c);
-  int getClientTitleHeight(Client *c);
-  void sendClientConfig(Client* c);
-  void gravitateClient(Client* c, Gravity multiplier);
-  void setClientShape(Client* c);
-  void queryClientName(Client* c);
+  void removeClient(std::shared_ptr<Client> c);
+  std::shared_ptr<Client> findClient(Window w);
+  void setXFocus(std::shared_ptr<Client> c);
+  void setClientFocus(std::shared_ptr<Client> c, bool focus);
+  void hideClient(std::shared_ptr<Client> c);
+  void unhideClient(std::shared_ptr<Client> c);
+  void shadeClient(std::shared_ptr<Client> c);
+  void maximizeClient(std::shared_ptr<Client> c);
+  void redrawClient(std::shared_ptr<Client> c);
+  void drawClientOutline(std::shared_ptr<Client> c);
+  int getClientIncsize(std::shared_ptr<Client> c, int *x_ret, int *y_ret, ResizeMode mode);
+  void initClientPosition(std::shared_ptr<Client> c);
+  void reparentClient(std::shared_ptr<Client> c);
+  int getClientTitleHeight(std::shared_ptr<Client> c);
+  void sendClientConfig(std::shared_ptr<Client> c);
+  void gravitateClient(std::shared_ptr<Client> c, Gravity multiplier);
+  void setClientShape(std::shared_ptr<Client> c);
+  void queryClientName(std::shared_ptr<Client> c);
   void forkExec(std::string cmd);
   void unfocusAnyStrayClients();
   void focusPreviousWindowInStackingOrder();
