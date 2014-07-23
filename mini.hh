@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 21 July 2014
+// Updated: 22 July 2014
 
 #ifndef __MINI_H__
 #define __MINI_H__

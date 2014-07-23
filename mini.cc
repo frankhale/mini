@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 21 July 2014
+// Date: 22 July 2014
 
 #include "mini.hh"
 
@@ -163,7 +163,7 @@ void WindowManager::addClient(Window w)
 
   client_window_list.push_back(w);
 
-  std::shared_ptr<Client> c(new Client);
+  auto c = std::make_shared<Client>();
 
   client_list.push_back(c);
   XGrabServer(dpy);
@@ -479,7 +479,7 @@ void WindowManager::handleFocusOutEvent(XEvent *ev)
 
       if(c)
       {
-        focused_client = NULL;
+        focused_client = nullptr;
         return;
       }
     }
@@ -617,15 +617,18 @@ void WindowManager::setWMState(Window window, int state)
 
 void WindowManager::sendWMDelete(Window window)
 {
-  int i, n, found = 0;
+  int i, n;
+  bool found = false;
   Atom *protocols;
 
   if (XGetWMProtocols(dpy, window, &protocols, &n))
   {
     for (i=0; i<n; i++)
     {
-      if (protocols[i] == atom_wm_delete)
-        found++;
+      if (protocols[i] == atom_wm_delete) {
+        found = true; 
+        break;
+      }
     }
 
     XFree(protocols);
@@ -653,22 +656,14 @@ int WindowManager::sendXMessage(Window w, Atom a, long mask, long x)
 
 void WindowManager::handleClientButtonEvent(XButtonEvent *ev, std::shared_ptr<Client> c)
 {
-  // Formula to tell if the pointer is in the little
-  // box on the right edge of the window. This box is
-  // the iconify button, resize button and close button.
-  int theight = getClientTitleHeight(c);
+  auto theight = getClientTitleHeight(c);
+  auto in_box = (ev->x >= c->width - theight) && (ev->y <= theight);
 
-  int in_box = (ev->x >= c->width - theight) && (ev->y <= theight);
-
-  // Used to compute the pointer position on click
-  // used in the motion handler when doing a window move.
   c->old_cx = c->x;
   c->old_cy = c->y;
   c->pointer_x = ev->x_root;
   c->pointer_y = ev->y_root;
 
-  // Allow us to get clicks from anywhere on the window
-  // so click to raise works.
   XAllowEvents(dpy, ReplayPointer, CurrentTime);
 
   switch (ev->button)
@@ -766,7 +761,7 @@ void WindowManager::handleClientButtonEvent(XButtonEvent *ev, std::shared_ptr<Cl
 
 void WindowManager::handleClientConfigureRequest(XConfigureRequestEvent *ev, std::shared_ptr<Client> c)
 {
-  int theight = getClientTitleHeight(c);
+  auto theight = getClientTitleHeight(c);
 
   gravitateClient(c, Gravity::REMOVE);
 
@@ -843,8 +838,8 @@ void WindowManager::handleClientFocusInEvent(XFocusChangeEvent *ev, std::shared_
 
 void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_ptr<Client> c)
 {
-  int nx=0, ny=0;
-  int theight = getClientTitleHeight(c);
+  auto nx=0, ny=0;
+  auto theight = getClientTitleHeight(c);
 
   if((ev->state & Button1Mask) && (focused_client == c))
   {
@@ -912,7 +907,7 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_
   {
     if(! c->is_being_resized)
     {
-      int in_box = (ev->x >= c->width - theight) && (ev->y <= theight);
+      auto in_box = (ev->x >= c->width - theight) && (ev->y <= theight);
 
       if(! in_box)
         return;
@@ -1034,7 +1029,7 @@ void WindowManager::unhideClient(std::shared_ptr<Client> c)
 
 void WindowManager::shadeClient(std::shared_ptr<Client> c)
 {
-  int theight = getClientTitleHeight(c);
+  auto theight = getClientTitleHeight(c);
 
   XRaiseWindow(dpy, c->frame);
 
@@ -1052,7 +1047,7 @@ void WindowManager::shadeClient(std::shared_ptr<Client> c)
 
 void WindowManager::maximizeClient(std::shared_ptr<Client> c)
 {
-  int theight = getClientTitleHeight(c);
+  auto theight = getClientTitleHeight(c);
 
   if(c->trans)
     return;
@@ -1120,8 +1115,8 @@ void WindowManager::redrawClient(std::shared_ptr<Client> c)
 
   GC gc;
 
-  int BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
-  int theight = getClientTitleHeight(c);
+  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto theight = getClientTitleHeight(c);
 
   if(c->has_focus)
     gc = border_gc;
@@ -1157,8 +1152,8 @@ void WindowManager::redrawClient(std::shared_ptr<Client> c)
 
 void WindowManager::drawClientOutline(std::shared_ptr<Client> c)
 {
-  int theight = getClientTitleHeight(c);
-  int BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto theight = getClientTitleHeight(c);
+  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
 
   if(! c->is_shaded)
   {
@@ -1282,9 +1277,9 @@ void WindowManager::reparentClient(std::shared_ptr<Client> c)
                      EnterWindowMask          |
                      LeaveWindowMask          ;
 
-  int theight = getClientTitleHeight(c);
-  int b_w = 0;
-  int BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto theight = getClientTitleHeight(c);
+  auto b_w = 0;
+  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
 
   if(c->border_width)
   {
@@ -1370,9 +1365,9 @@ void WindowManager::sendClientConfig(std::shared_ptr<Client> c)
 
 void WindowManager::gravitateClient(std::shared_ptr<Client> c, Gravity multiplier)
 {
-  int dy = 0;
-  int gravity = (c->size->flags & PWinGravity) ? c->size->win_gravity : NorthWestGravity;
-  int theight = getClientTitleHeight(c);
+  auto dy = 0;
+  auto gravity = (c->size->flags & PWinGravity) ? c->size->win_gravity : NorthWestGravity;
+  auto theight = getClientTitleHeight(c);
 
   switch (gravity)
   {
@@ -1391,10 +1386,10 @@ void WindowManager::gravitateClient(std::shared_ptr<Client> c, Gravity multiplie
 
 void WindowManager::setClientShape(std::shared_ptr<Client> c)
 {
-  int n=0, order=0;
+  auto n=0, order=0;
   XRectangle temp, *dummy;
-  int theight = getClientTitleHeight(c);
-  int BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto theight = getClientTitleHeight(c);
+  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
 
   dummy = XShapeGetRectangles(dpy, c->window, ShapeBounding, &n, &order);
 
@@ -1453,13 +1448,13 @@ void WindowManager::focusPreviousWindowInStackingOrder()
 
     if(client_list_for_current_desktop.size())
     {
-      std::list<std::shared_ptr<Client>>::iterator iter = client_list_for_current_desktop.end();
+      auto iter = client_list_for_current_desktop.end();
 
       iter--;
 
       if((*iter))
       {
-        std::shared_ptr<Client> c = findClient((*iter)->window);
+        auto c = findClient((*iter)->window);
         
         if(c)
           setXFocus(c);
@@ -1474,7 +1469,7 @@ void WindowManager::focusPreviousWindowInStackingOrder()
 
 void WindowManager::queryClientName(std::shared_ptr<Client> c)
 {
-  char* name=NULL;
+  char* name = nullptr;
 
   XFetchName(dpy, c->window, &name);
 
