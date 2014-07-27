@@ -28,6 +28,5 @@ GPL 3
 
 ##Author
 
-Frank Hale <frankhale@gmail.com>  
-21 July 2014
+Frank Hale <frankhale@gmail.com>
 
