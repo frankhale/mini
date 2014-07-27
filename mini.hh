@@ -19,12 +19,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 22 July 2014
+// Updated: 27 July 2014
 
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 21 July 2014 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 27 July 2014 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
@@ -34,41 +34,56 @@
 #include <X11/Xatom.h>
 #include <X11/Xmd.h>
 #include <X11/extensions/shape.h>
+#include <locale>
+#include <pwd.h>
+#include <json-c/json.h>
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 #include <list>
+#include <regex>
 #include <string>
 #include <string.h>
+#include <fstream>
 #include <iostream>
 #include <memory>
+
+using namespace std;
 
 enum class JustifyMode { LEFT, CENTER, RIGHT };
 enum class Gravity { APPLY = 1, REMOVE = -1 };
 enum class ResizeMode { PIXELS = 0, INCREMENTS = 1 };
 
-#define DEFAULT_FONT                "Fixed"
-#define DEFAULT_FOREGROUND_COLOR    "#000000" // Window title font color
-#define DEFAULT_BACKGROUND_COLOR    "#999999" // Window title background color
-#define DEFAULT_FOCUS_COLOR         "#dddddd"
-#define DEFAULT_BORDER_COLOR        "#000000"
-#define FOCUSED_BORDER_COLOR        "#000000"
-#define UNFOCUSED_BORDER_COLOR      "#888888"
-#define FOCUSED_WINDOW_TITLE_COLOR  "#FFFFFF"
-
-#define DEFAULT_CMD                 "xterm -ls -sb -bg black -fg white"
-#define DEFAULT_BORDER_WIDTH        1
-#define SPACE                       3
-#define MINSIZE                     15
-#define EDGE_SNAP                   true
-#define SNAP                        5
-#define TEXT_JUSTIFY                JustifyMode::RIGHT
-#define WIRE_MOVE                   false
-#define TRANSIENT_WINDOW_HEIGHT     8
-#define ALT_KEY_COUNT               2
+#define ALT_KEY_COUNT 2
 
 int handleXError(Display *dpy, XErrorEvent *e);
+
+class Config {
+  private:
+    const std::string configFileName = ".minirc";
+
+    void initDefaults();
+    string getColor(string input, string defaultColor);
+
+  public:
+    std::string font;
+    std::string foregroundColor;
+    std::string backgroundColor;
+    std::string focusedColor;
+    std::string focusedBorderColor;
+    std::string unfocusedBorderColor;
+    std::string rightClickCmd;
+    int borderWidth;
+    int space;
+    bool edgeSnap;
+    bool snap;
+    JustifyMode textJustify;
+    bool wireMove;
+    int transientWindowHeight;
+    
+    Config();
+};
 
 class WindowManager {
 private:
@@ -120,11 +135,13 @@ private:
     bool should_takefocus = false;
   };
   
-  std::string command_line;
-  std::list<std::shared_ptr<Client>> client_list;
-  std::list<Window> client_window_list;
+  Config config;
 
-  std::shared_ptr<Client> focused_client = nullptr;
+  string command_line;
+  list<std::shared_ptr<Client>> client_list;
+  list<Window> client_window_list;
+
+  shared_ptr<Client> focused_client = nullptr;
   XFontStruct *font;
 
   GC invert_gc;
@@ -135,7 +152,6 @@ private:
 
   XColor fg;
   XColor bg;
-  XColor bd;
   XColor fc;
   XColor focused_border;
   XColor unfocused_border;

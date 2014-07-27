@@ -1,4 +1,5 @@
 // A new window manager based off my other window manager aewm++
+// SET UP ATOMS
 // Copyright (C) 2010-2014 Frank Hale <frankhale@gmail.com>
 //
 // This program is free software; you can redistribute it and/or
@@ -16,16 +17,131 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.  If not, see <http:b://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 22 July 2014
+// Date: 27 July 2014
 
 #include "mini.hh"
 
 WindowManager *wm;
-
 KeySym WindowManager::alt_keys[] = { XK_Delete, XK_End };
+
+Config::Config() {
+
+  struct passwd *pw = getpwuid(getuid());
+  string homedir = pw->pw_dir;
+  string configPath = homedir + "/" + configFileName;
+
+  ifstream ifs(configPath);
+
+  if(ifs.good()) {
+    json_object *config_json;
+
+    string raw_json((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+
+    ifs.close();
+
+    config_json = json_tokener_parse(raw_json.c_str());    
+
+    json_object *jo_font;
+    json_object *jo_foreground_color;
+    json_object *jo_background_color;
+    json_object *jo_focused_color;
+    json_object *jo_focused_border_color;
+    json_object *jo_unfocused_border_color;
+    json_object *jo_right_click_cmd;
+    json_object *jo_border_width;
+    json_object *jo_space;
+    json_object *jo_edge_snap;
+    json_object *jo_snap;
+    json_object *jo_text_justify;
+    json_object *jo_wire_move;
+    json_object *jo_transient_window_height;
+
+    json_object_object_get_ex(config_json, "font", &jo_font);
+    json_object_object_get_ex(config_json, "foregroundColor", &jo_foreground_color);
+    json_object_object_get_ex(config_json, "backgroundColor", &jo_background_color);
+    json_object_object_get_ex(config_json, "focusedColor", &jo_focused_color);
+    json_object_object_get_ex(config_json, "focusedBorderColor", &jo_focused_border_color);
+    json_object_object_get_ex(config_json, "unfocusedBorderColor", &jo_unfocused_border_color);
+    json_object_object_get_ex(config_json, "rightClickCmd", &jo_right_click_cmd);
+    json_object_object_get_ex(config_json, "borderWidth", &jo_border_width);
+    json_object_object_get_ex(config_json, "space", &jo_space);
+    json_object_object_get_ex(config_json, "edgeSnap", &jo_edge_snap);
+    json_object_object_get_ex(config_json, "snap", &jo_snap);
+    json_object_object_get_ex(config_json, "textJustify", &jo_text_justify);
+    json_object_object_get_ex(config_json, "wireMove", &jo_wire_move);
+    json_object_object_get_ex(config_json, "transientWindowHeight", &jo_transient_window_height);
+
+    font = json_object_get_string(jo_font);
+    
+    foregroundColor = json_object_get_string(jo_foreground_color);
+    backgroundColor = json_object_get_string(jo_background_color);
+    focusedColor = json_object_get_string(jo_focused_color);
+    focusedBorderColor = json_object_get_string(jo_focused_border_color);
+    unfocusedBorderColor = json_object_get_string(jo_unfocused_border_color);
+    rightClickCmd = json_object_get_string(jo_right_click_cmd);
+    borderWidth = json_object_get_int(jo_border_width);
+    space = json_object_get_int(jo_space);
+    edgeSnap = json_object_get_boolean(jo_edge_snap);
+    snap = json_object_get_int(jo_snap);
+    wireMove = json_object_get_boolean(jo_wire_move);
+    transientWindowHeight = json_object_get_int(jo_transient_window_height);
+
+    string textJustifyString = json_object_get_string(jo_text_justify);
+
+    if(borderWidth == 0) borderWidth = 1;
+    if(space == 0) space = 3;
+    if(snap == 0) snap = 5;
+    if(transientWindowHeight == 0) transientWindowHeight = 8;
+
+    if(textJustifyString == "Left") {
+      textJustify = JustifyMode::LEFT;
+    } else if (textJustifyString == "Center") {
+      textJustify = JustifyMode::CENTER;
+    } else if (textJustifyString == "Right") {
+      textJustify = JustifyMode::RIGHT;
+    } else {
+      textJustify = JustifyMode::LEFT;
+    }
+
+    foregroundColor = getColor(foregroundColor, "#000000");
+    backgroundColor = getColor(backgroundColor, "#999999");
+    focusedColor = getColor(focusedColor, "#dddddd");
+    focusedBorderColor = getColor(focusedBorderColor, "#000000");
+    unfocusedBorderColor = getColor(unfocusedBorderColor, "#888888");
+  } else {
+    initDefaults();
+  }
+}
+
+string Config::getColor(string input, string defaultColor) {
+  auto colorRegex = regex("^#(?:[0-9a-fA-F]{3}){1,2}$");
+  
+  if(regex_match(input, colorRegex)) {
+    return input;
+  } else {
+    return defaultColor;
+  }
+}
+
+void Config::initDefaults() {
+  font = "Fixed";
+  foregroundColor = "#000000";
+  backgroundColor = "#999999";
+  focusedColor = "#dddddd";
+  focusedBorderColor = "#000000";
+  unfocusedBorderColor = "#888888";
+  rightClickCmd = "xterm -ls -sb -bg black -fg white";
+  borderWidth = 1;
+  space = 3;
+  edgeSnap = true;
+  snap = 5;
+  textJustify = JustifyMode::RIGHT;
+  wireMove = false;
+  transientWindowHeight = 8;
+}
 
 void WindowManager::grabKeys(Window w)
 {
@@ -55,13 +171,12 @@ WindowManager::WindowManager(int argc, char** argv)
   signal(SIGINT, sigHandler);
   signal(SIGTERM, sigHandler);
   signal(SIGHUP, sigHandler);
-  signal(SIGCHLD, sigHandler);
 
   dpy = XOpenDisplay(getenv("DISPLAY"));
 
   if(dpy)
   {
-    font = XLoadQueryFont(dpy, DEFAULT_FONT);
+    font = XLoadQueryFont(dpy, config.font.c_str());
 
     if (!font)
       font = XLoadQueryFont(dpy, "Fixed");
@@ -80,20 +195,17 @@ WindowManager::WindowManager(int argc, char** argv)
 
   XSetErrorHandler(handleXError);
 
-  // SET UP ATOMS
   atom_wm_state       = XInternAtom(dpy, "WM_STATE", False);
   atom_wm_change_state  = XInternAtom(dpy, "WM_CHANGE_STATE", False);
   atom_wm_protos       = XInternAtom(dpy, "WM_PROTOCOLS", False);
   atom_wm_delete       = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
   atom_wm_takefocus    = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 
-  // SETUP COLORS USED FOR WINDOW TITLE BARS and WINDOW BORDERS
-  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), DEFAULT_FOREGROUND_COLOR, &fg, &dummyc);
-  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), DEFAULT_BACKGROUND_COLOR, &bg, &dummyc);
-  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), DEFAULT_BORDER_COLOR, &bd, &dummyc);
-  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), DEFAULT_FOCUS_COLOR, &fc, &dummyc);
-  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), FOCUSED_BORDER_COLOR, &focused_border, &dummyc);
-  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), UNFOCUSED_BORDER_COLOR, &unfocused_border, &dummyc);
+  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), config.foregroundColor.c_str(), &fg, &dummyc);
+  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), config.backgroundColor.c_str(), &bg, &dummyc);
+  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), config.focusedColor.c_str(), &fc, &dummyc);
+  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), config.focusedBorderColor.c_str(), &focused_border, &dummyc);
+  XAllocNamedColor(dpy, DefaultColormap(dpy, screen), config.unfocusedBorderColor.c_str(), &unfocused_border, &dummyc);
 
   shape = XShapeQueryExtension(dpy, &shape_event, &dummy);
   move_curs = XCreateFontCursor(dpy, XC_fleur);
@@ -112,8 +224,8 @@ WindowManager::WindowManager(int argc, char** argv)
   gv.foreground = fg.pixel;
   focused_title_gc = XCreateGC(dpy, root, GCForeground|GCFont, &gv);
 
-  gv.foreground = bd.pixel;
-  gv.line_width = DEFAULT_BORDER_WIDTH;
+  gv.foreground = fg.pixel;
+  gv.line_width = config.borderWidth;
   border_gc = XCreateGC(dpy, root, GCFunction|GCForeground|GCLineWidth, &gv);
 
   gv.foreground = fg.pixel;
@@ -382,7 +494,7 @@ void WindowManager::handleButtonReleaseEvent(XEvent *ev)
   }
   else if (ev->xbutton.window==root && ev->xbutton.button==Button3)
   {
-    forkExec(DEFAULT_CMD);
+    forkExec(config.rightClickCmd);
   }
 }
 
@@ -541,7 +653,6 @@ void WindowManager::cleanup()
   Window dummyw1, dummyw2, *wins;
   std::shared_ptr<Client> c;
 
-  // Preserve stacking order when removing the clientfrom the list.
   XQueryTree(dpy, root, &dummyw1, &dummyw2, &wins, &nwins);
 
   for (i = 0; i < nwins; i++)
@@ -573,9 +684,6 @@ void WindowManager::cleanup()
 
 void WindowManager::unfocusAnyStrayClients()
 {
-  // To prevent two windows titlebars from being painted with the focus color we
-  // will prevent that from happening by setting all windows to false.
-
   for(auto c : client_list)
     setClientFocus(c, false);
 }
@@ -843,7 +951,7 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_
 
   if((ev->state & Button1Mask) && (focused_client == c))
   {
-    if(! c->do_drawoutline_once && WIRE_MOVE)
+    if(! c->do_drawoutline_once && config.wireMove)
     {
       XGrabServer(dpy);
       drawClientOutline(c);
@@ -851,13 +959,13 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_
       c->is_being_dragged=true;
     }
 
-    if(WIRE_MOVE)
+    if(config.wireMove)
       drawClientOutline(c);
 
     nx = c->old_cx + (ev->x_root - c->pointer_x);
     ny = c->old_cy + (ev->y_root - c->pointer_y);
 
-    if(EDGE_SNAP)
+    if(config.edgeSnap)
     {
       // Move beyond edges of screen
       if(nx == xres - c->width)
@@ -865,29 +973,29 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_
       else if(nx == 0)
         nx = -1;
 
-      if(ny == yres - SNAP)
-        ny = yres - SNAP - 1;
+      if(ny == yres - config.snap)
+        ny = yres - config.snap - 1;
       else if(ny == theight)
         ny = theight - 1;
 
       // Snap to edges of screen
-      if( (nx + c->width >= xres - SNAP) && (nx + c->width <= xres) )
+      if( (nx + c->width >= xres - config.snap) && (nx + c->width <= xres) )
         nx = xres - c->width;
-      else if( (nx <= SNAP) && (nx >= 0) )
+      else if( (nx <= config.snap) && (nx >= 0) )
         nx = 0;
 
       if(c->is_shaded)
       {
-        if( (ny  >= yres - SNAP) && (ny  <= yres))
+        if( (ny  >= yres - config.snap) && (ny  <= yres))
           ny = yres;
-        else if( (ny - theight <= SNAP) && (ny - theight >= 0))
+        else if( (ny - theight <= config.snap) && (ny - theight >= 0))
           ny = theight;
       }
       else
       {
-        if((ny + c->height >= yres - SNAP) && (ny + c->height <= yres))
+        if((ny + c->height >= yres - config.snap) && (ny + c->height <= yres))
           ny = yres - c->height;
-        else if((ny - theight <= SNAP) && (ny - theight >= 0))
+        else if((ny - theight <= config.snap) && (ny - theight >= 0))
           ny = theight;
       }
     }
@@ -895,7 +1003,7 @@ void WindowManager::handleClientMotionNotifyEvent(XMotionEvent *ev, std::shared_
     c->x=nx;
     c->y=ny;
 
-    if(!WIRE_MOVE)
+    if(!config.wireMove)
     {
       XMoveWindow(dpy, c->frame, nx, ny-theight);
       sendClientConfig(c);
@@ -1115,7 +1223,7 @@ void WindowManager::redrawClient(std::shared_ptr<Client> c)
 
   GC gc;
 
-  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto BW = (c->has_border ? config.borderWidth : 0);
   auto theight = getClientTitleHeight(c);
 
   if(c->has_focus)
@@ -1131,10 +1239,10 @@ void WindowManager::redrawClient(std::shared_ptr<Client> c)
 
   if (!c->trans && (c->name.length()>0))
   {
-    switch(TEXT_JUSTIFY)
+    switch(config.textJustify)
     {
      case JustifyMode::LEFT:
-        c->text_justify = SPACE;
+        c->text_justify = config.space;
       break;
 
      case JustifyMode::CENTER:
@@ -1153,7 +1261,7 @@ void WindowManager::redrawClient(std::shared_ptr<Client> c)
 void WindowManager::drawClientOutline(std::shared_ptr<Client> c)
 {
   auto theight = getClientTitleHeight(c);
-  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto BW = (c->has_border ? config.borderWidth : 0);
 
   if(! c->is_shaded)
   {
@@ -1265,7 +1373,7 @@ void WindowManager::reparentClient(std::shared_ptr<Client> c)
   XGrabServer(dpy);
 
   pattr.background_pixel = fc.pixel;
-  pattr.border_pixel = bd.pixel;
+  pattr.border_pixel = fc.pixel;
   pattr.do_not_propagate_mask = ButtonPressMask|ButtonReleaseMask|ButtonMotionMask;
   pattr.override_redirect=False;
   pattr.event_mask = ButtonMotionMask         |
@@ -1279,7 +1387,7 @@ void WindowManager::reparentClient(std::shared_ptr<Client> c)
 
   auto theight = getClientTitleHeight(c);
   auto b_w = 0;
-  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto BW = (c->has_border ? config.borderWidth : 0);
 
   if(c->border_width)
   {
@@ -1343,7 +1451,7 @@ int WindowManager::getClientTitleHeight(std::shared_ptr<Client> c)
 {
   if (!c->has_title) return 0;
 
-  return (c->trans) ? TRANSIENT_WINDOW_HEIGHT : (font->ascent + font->descent + SPACE);
+  return (c->trans) ? config.transientWindowHeight : (font->ascent + font->descent + config.space);
 }
 
 void WindowManager::sendClientConfig(std::shared_ptr<Client> c)
@@ -1389,7 +1497,7 @@ void WindowManager::setClientShape(std::shared_ptr<Client> c)
   auto n=0, order=0;
   XRectangle temp, *dummy;
   auto theight = getClientTitleHeight(c);
-  auto BW = (c->has_border ? DEFAULT_BORDER_WIDTH : 0);
+  auto BW = (c->has_border ? config.borderWidth : 0);
 
   dummy = XShapeGetRectangles(dpy, c->window, ShapeBounding, &n, &order);
 
@@ -1493,10 +1601,6 @@ void WindowManager::sigHandler(int signal) {
 
   case SIGHUP:
     wm->restart();
-    break;
-
-  case SIGCHLD:
-    wait(NULL);
     break;
   }
 }

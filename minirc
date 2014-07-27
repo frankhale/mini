@@ -1,0 +1,16 @@
+{
+  "font": "Fixed",
+  "foregroundColor" : "#000000",
+  "backgroundColor" : "#999999",
+  "focusedColor" : "#dddddd",
+  "focusedBorderColor" : "#000000",
+  "unfocusedBorderColor" : "#888888",
+  "rightClickCmd" : "xterm -ls -sb -bg black -fg white",
+  "borderWidth" : 1,
+  "space" : 3,
+  "edgeSnap" : true,
+  "snap" : 5,
+  "textJustify" : "Right",
+  "wireMove" : false,
+  "transientWindowHeight" : 8
+}
