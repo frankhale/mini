@@ -20,7 +20,7 @@
 // along with this program.  If not, see <http:b://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 28 July 2014
+// Date: 27 November 2014
 
 #include "mini.hh"
 
@@ -1574,11 +1574,21 @@ void WindowManager::queryClientName(std::shared_ptr<Client> c)
 	if(name)
 	{
 		c->name = name;
-		XTextExtents(font, c->name.c_str(), c->name.length(), &c->direction, &c->ascent, &c->descent, &c->overall);
-		c->text_width = c->overall.width;
-
 		XFree(name);
-	}
+	} else {
+    XClassHint class_hint;
+    XGetClassHint(dpy, c->window, &class_hint);
+   
+    if(class_hint.res_name)
+    {
+      c->name = class_hint.res_name;
+      XFree(class_hint.res_name);
+    }
+  }
+
+	XTextExtents(font, c->name.c_str(), c->name.length(), &c->direction, &c->ascent, &c->descent, &c->overall);
+	c->text_width = c->overall.width;
+
 }
 
 void WindowManager::sigHandler(int signal) {

@@ -24,7 +24,7 @@
 # Date: 27 July 2014
 
 CC = clang++
-ADDITIONAL_CFLAGS = -ggdb -O2 -Wall -std=c++11 -Wc++11-extensions
+ADDITIONAL_CFLAGS = -ggdb -O2 -Wall -std=c++1y
 
 prefix   = 
 INCLUDES = -I$/usr/X11R6
