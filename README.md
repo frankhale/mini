@@ -1,6 +1,7 @@
 ##Mini
 
-mini is a window manager for X11 and is a stripped down lean version of aewm++
+mini (minimal) is a window manager for X11 and is a stripped down lean version 
+of aewm++
 
 aewm++ can be found at: https://github.com/frankhale/aewmpp
 
@@ -28,5 +29,5 @@ GPL 3
 
 ##Author
 
-Frank Hale <frankhale@gmail.com>
-
+Frank Hale &lt;frankhale@gmail.com&gt;  
+Updated: 2 December 2014
