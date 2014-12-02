@@ -1576,6 +1576,12 @@ void WindowManager::queryClientName(std::shared_ptr<Client> c)
 		c->name = name;
 		XFree(name);
 	} else {
+    XTextProperty text;
+    XGetWMName(dpy, c->window, &text);
+    c->name = (char*) text.value;
+  }
+  
+  if (c->name.compare("unknown") == 0) { 
     XClassHint class_hint;
     XGetClassHint(dpy, c->window, &class_hint);
    
