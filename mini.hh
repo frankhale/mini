@@ -24,7 +24,7 @@
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 1,0 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 1.0 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
