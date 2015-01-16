@@ -19,12 +19,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 28 July 2014
+// Updated: 31 August 2014
 
 #ifndef __MINI_H__
 #define __MINI_H__
 
-#define VERSION_STRING "Mini Window Manager | 28 July 2014 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
+#define VERSION_STRING "Mini Window Manager | 1,0 | http://github.com/frankhale/mini | Frank Hale <frankhale@gmail.com>"
 
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>

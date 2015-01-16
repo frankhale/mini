@@ -20,7 +20,7 @@
 // along with this program.  If not, see <http:b://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Date: 27 November 2014
+// Date: 2 December 2014
 
 #include "mini.hh"
 
