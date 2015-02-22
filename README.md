@@ -25,9 +25,8 @@ json-c
 
 ###License
 
-GPL 3
+GPLv2
 
 ##Author
 
 Frank Hale &lt;frankhale@gmail.com&gt;  
-Updated: 2 December 2014
