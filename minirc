@@ -1,8 +1,8 @@
 {
   "font": "Fixed",
-  "foregroundColor" : "#000000",
-  "backgroundColor" : "#999999",
-  "focusedColor" : "#dddddd",
+  "windowTitleTextColor" : "#000000",
+  "windowTitleFocusedColor" : "#999999",
+  "windowTitleUnfocusedColor" : "#dddddd",
   "focusedBorderColor" : "#000000",
   "unfocusedBorderColor" : "#888888",
   "rightClickCmd" : "xterm -ls -sb -bg black -fg white",

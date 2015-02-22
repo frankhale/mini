@@ -60,9 +60,12 @@ Config::Config()
 		json_object *jo_transient_window_height;
 
 		json_object_object_get_ex(config_json, "font", &jo_font);
-		json_object_object_get_ex(config_json, "foregroundColor", &jo_foreground_color);
-		json_object_object_get_ex(config_json, "backgroundColor", &jo_background_color);
-		json_object_object_get_ex(config_json, "focusedColor", &jo_focused_color);
+		//json_object_object_get_ex(config_json, "foregroundColor", &jo_foreground_color);
+    json_object_object_get_ex(config_json, "windowTitleTextColor", &jo_foreground_color);
+    //json_object_object_get_ex(config_json, "backgroundColor", &jo_background_color);
+		json_object_object_get_ex(config_json, "windowTitleFocusedColor", &jo_background_color);
+		//json_object_object_get_ex(config_json, "focusedColor", &jo_focused_color);
+    json_object_object_get_ex(config_json, "windowTitleUnfocusedColor", &jo_focused_color);
 		json_object_object_get_ex(config_json, "focusedBorderColor", &jo_focused_border_color);
 		json_object_object_get_ex(config_json, "unfocusedBorderColor", &jo_unfocused_border_color);
 		json_object_object_get_ex(config_json, "rightClickCmd", &jo_right_click_cmd);
@@ -77,11 +80,16 @@ Config::Config()
 		font = json_object_get_string(jo_font);
 
 		foregroundColor = json_object_get_string(jo_foreground_color);
+    //cout << "foregroundColor: " << foregroundColor << endl;
 		backgroundColor = json_object_get_string(jo_background_color);
+    //cout << "backgroundColor: " << backgroundColor << endl;
 		focusedColor = json_object_get_string(jo_focused_color);
-		focusedBorderColor = json_object_get_string(jo_focused_border_color);
-		unfocusedBorderColor = json_object_get_string(jo_unfocused_border_color);
-		rightClickCmd = json_object_get_string(jo_right_click_cmd);
+    //cout << "focusedColor: " << focusedColor << endl;
+    focusedBorderColor = json_object_get_string(jo_focused_border_color);
+    //cout << "focusedBorderColor: " << focusedBorderColor << endl;
+    unfocusedBorderColor = json_object_get_string(jo_unfocused_border_color);
+    //cout << "unfocusedBorderColor: " << unfocusedBorderColor << endl;
+    rightClickCmd = json_object_get_string(jo_right_click_cmd);
 		borderWidth = json_object_get_int(jo_border_width);
 		space = json_object_get_int(jo_space);
 		edgeSnap = json_object_get_boolean(jo_edge_snap);
@@ -106,11 +114,17 @@ Config::Config()
 			textJustify = JustifyMode::LEFT;
 		}
 
-		foregroundColor = getColor(foregroundColor, "#000000");
+		// focused window title color
+    foregroundColor = getColor(foregroundColor, "#000000");
+
+    // focused window background color
 		backgroundColor = getColor(backgroundColor, "#999999");
+
+    // unfocused window background color
 		focusedColor = getColor(focusedColor, "#dddddd");
-		focusedBorderColor = getColor(focusedBorderColor, "#000000");
-		unfocusedBorderColor = getColor(unfocusedBorderColor, "#888888");
+		
+    focusedBorderColor = getColor(focusedBorderColor, "#000000");		
+    unfocusedBorderColor = getColor(unfocusedBorderColor, "#888888");
 	} else {
 		initDefaults();
 	}
