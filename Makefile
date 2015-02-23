@@ -21,7 +21,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Started: 28 January 2010 
-# Date: 27 July 2014
+# Date: 22 February 2015
 
 CC = clang++
 CFLAGS = -O2 -Wall -std=c++14 -stdlib=libc++
