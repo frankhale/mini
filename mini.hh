@@ -19,7 +19,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // Started: 28 January 2010
-// Updated: 31 August 2014
+// Updated: 22 February 2015
 
 #ifndef __MINI_H__
 #define __MINI_H__
@@ -44,10 +44,12 @@
 #include <list>
 #include <regex>
 #include <string>
-#include <string.h>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
+#include <ctime>
 #include <memory>
+#include <sstream>
 
 using namespace std;
 
@@ -61,7 +63,7 @@ enum class ResizeMode {
   PIXELS = 0, INCREMENTS = 1
 };
 
-#define ALT_KEY_COUNT 2
+#define ALT_KEY_COUNT 3
 
 int handleXError(Display *dpy, XErrorEvent *e);
 
@@ -73,13 +75,14 @@ private:
 	string getColor(string input, string defaultColor);
 
 public:
-	std::string font;
-	std::string foregroundColor;
-	std::string backgroundColor;
-	std::string focusedColor;
-	std::string focusedBorderColor;
-	std::string unfocusedBorderColor;
-	std::string rightClickCmd;
+	string font;
+	string foregroundColor;
+	string backgroundColor;
+	string focusedColor;
+	string focusedBorderColor;
+	string unfocusedBorderColor;
+	string rightClickCmd;
+  string alternateCmd;
 	int borderWidth;
 	int space;
 	bool edgeSnap;

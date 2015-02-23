@@ -24,23 +24,18 @@
 # Date: 27 July 2014
 
 CC = clang++
-ADDITIONAL_CFLAGS = -ggdb -O2 -Wall -std=c++1y
+CFLAGS = -O2 -Wall -std=c++14 -stdlib=libc++
 
 prefix   = 
 INCLUDES = -I$/usr/X11R6
 LDPATH   = -L/usr/X11R6/lib
-LIBS     = -lXext -lX11 -ljson-c
-HEADERS  = mini.hh 
-OBJS     = mini.o 	
+LIBS     = -lsupc++ -lc++abi -lXext -lX11 -ljson-c
 CONFIG   = minirc
 
 all: mini
 
-mini: $(OBJS)
-	$(CC) $(OBJS) $(LDPATH) $(LIBS) -o $@
-
-$(OBJS): %.o: %.cc $(HEADERS)
-	$(CC) $(CFLAGS) $(ADDITIONAL_CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
+mini:
+	$(CC) $(CFLAGS) $(INCLUDES) mini.cc $(LIBS) -o $@
 
 install: all
 	mkdir -p $(DESTDIR)$(prefix)
@@ -48,4 +43,4 @@ install: all
 	cp $(CONFIG) ~/.$(CONFIG)
 
 clean:
-	rm -f mini $(OBJS) core
+	rm -f mini 

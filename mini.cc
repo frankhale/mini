@@ -25,7 +25,7 @@
 #include "mini.hh"
 
 WindowManager *wm;
-KeySym WindowManager::alt_keys[] = { XK_Delete, XK_End };
+KeySym WindowManager::alt_keys[] = { XK_Delete, XK_End, XK_Home };
 
 Config::Config() 
 {
@@ -51,6 +51,7 @@ Config::Config()
 		json_object *jo_focused_border_color;
 		json_object *jo_unfocused_border_color;
 		json_object *jo_right_click_cmd;
+    json_object *jo_alternate_cmd;
 		json_object *jo_border_width;
 		json_object *jo_space;
 		json_object *jo_edge_snap;
@@ -60,15 +61,13 @@ Config::Config()
 		json_object *jo_transient_window_height;
 
 		json_object_object_get_ex(config_json, "font", &jo_font);
-		//json_object_object_get_ex(config_json, "foregroundColor", &jo_foreground_color);
     json_object_object_get_ex(config_json, "windowTitleTextColor", &jo_foreground_color);
-    //json_object_object_get_ex(config_json, "backgroundColor", &jo_background_color);
 		json_object_object_get_ex(config_json, "windowTitleFocusedColor", &jo_background_color);
-		//json_object_object_get_ex(config_json, "focusedColor", &jo_focused_color);
     json_object_object_get_ex(config_json, "windowTitleUnfocusedColor", &jo_focused_color);
 		json_object_object_get_ex(config_json, "focusedBorderColor", &jo_focused_border_color);
 		json_object_object_get_ex(config_json, "unfocusedBorderColor", &jo_unfocused_border_color);
 		json_object_object_get_ex(config_json, "rightClickCmd", &jo_right_click_cmd);
+    json_object_object_get_ex(config_json, "alternateCmd", &jo_alternate_cmd);
 		json_object_object_get_ex(config_json, "borderWidth", &jo_border_width);
 		json_object_object_get_ex(config_json, "space", &jo_space);
 		json_object_object_get_ex(config_json, "edgeSnap", &jo_edge_snap);
@@ -79,25 +78,46 @@ Config::Config()
 
 		font = json_object_get_string(jo_font);
 
-		foregroundColor = json_object_get_string(jo_foreground_color);
-    //cout << "foregroundColor: " << foregroundColor << endl;
-		backgroundColor = json_object_get_string(jo_background_color);
-    //cout << "backgroundColor: " << backgroundColor << endl;
-		focusedColor = json_object_get_string(jo_focused_color);
-    //cout << "focusedColor: " << focusedColor << endl;
-    focusedBorderColor = json_object_get_string(jo_focused_border_color);
-    //cout << "focusedBorderColor: " << focusedBorderColor << endl;
-    unfocusedBorderColor = json_object_get_string(jo_unfocused_border_color);
-    //cout << "unfocusedBorderColor: " << unfocusedBorderColor << endl;
-    rightClickCmd = json_object_get_string(jo_right_click_cmd);
-		borderWidth = json_object_get_int(jo_border_width);
-		space = json_object_get_int(jo_space);
-		edgeSnap = json_object_get_boolean(jo_edge_snap);
-		snap = json_object_get_int(jo_snap);
-		wireMove = json_object_get_boolean(jo_wire_move);
-		transientWindowHeight = json_object_get_int(jo_transient_window_height);
+		if(jo_foreground_color != NULL)
+      foregroundColor = json_object_get_string(jo_foreground_color);
+		
+    if(jo_background_color != NULL)
+      backgroundColor = json_object_get_string(jo_background_color);
+	
+  	if(jo_focused_color != NULL)
+      focusedColor = json_object_get_string(jo_focused_color);
 
-		string textJustifyString = json_object_get_string(jo_text_justify);
+    if(jo_focused_border_color != NULL)
+      focusedBorderColor = json_object_get_string(jo_focused_border_color);
+
+    if(jo_unfocused_border_color != NULL)
+      unfocusedBorderColor = json_object_get_string(jo_unfocused_border_color);
+
+    if(jo_right_click_cmd != NULL)
+      rightClickCmd = json_object_get_string(jo_right_click_cmd);
+    
+    if(jo_alternate_cmd != NULL)
+      alternateCmd = json_object_get_string(jo_alternate_cmd);
+		
+    if(jo_border_width != NULL)
+      borderWidth = json_object_get_int(jo_border_width);
+		
+    if(jo_space != NULL)
+      space = json_object_get_int(jo_space);
+		
+    if(jo_edge_snap != NULL)
+      edgeSnap = json_object_get_boolean(jo_edge_snap);
+		
+    if(jo_snap != NULL)
+      snap = json_object_get_int(jo_snap);
+	
+    if(jo_wire_move != NULL)	
+      wireMove = json_object_get_boolean(jo_wire_move);
+	
+  	if(jo_transient_window_height != NULL)
+      transientWindowHeight = json_object_get_int(jo_transient_window_height);
+
+  	string textJustifyString = json_object_get_string(jo_text_justify);
 
 		if(borderWidth == 0) borderWidth = 1;
 		if(space == 0) space = 3;
@@ -116,13 +136,10 @@ Config::Config()
 
 		// focused window title color
     foregroundColor = getColor(foregroundColor, "#000000");
-
     // focused window background color
 		backgroundColor = getColor(backgroundColor, "#999999");
-
     // unfocused window background color
 		focusedColor = getColor(focusedColor, "#dddddd");
-		
     focusedBorderColor = getColor(focusedBorderColor, "#000000");		
     unfocusedBorderColor = getColor(unfocusedBorderColor, "#888888");
 	} else {
@@ -461,11 +478,23 @@ void WindowManager::handleKeyPressEvent(XEvent *ev)
 		std::cerr << "Window manager is restarting..." << std::endl;
 		restart();
 		break;
-
-	case XK_End:
-		std::cerr << "Window manager is quitting." << std::endl;
+  case XK_End:
+		std::cerr << "Window manager is quitting..." << std::endl;
 		quitNicely();
 		break;
+  case XK_Home:
+ 		cout << "Taking Screenshot..." << endl;
+    if(fork() == 0) {
+      if(config.alternateCmd.length() > 0) {
+        auto t = time(nullptr);
+        auto tm = *localtime(&t);
+        stringstream buffer;
+        buffer << put_time(&tm, "%d%b%Y@%H%M%S");
+        string filename = "mini-" + buffer.str() + ".png";
+        execlp(config.alternateCmd.c_str(), config.alternateCmd.c_str(), filename.c_str(), NULL);
+      }
+    }   
+    break;
 	}
 }
 
@@ -508,8 +537,10 @@ void WindowManager::handleButtonReleaseEvent(XEvent *ev)
 	}
 	else if (ev->xbutton.window==root && ev->xbutton.button==Button3)
 	{
-		if(fork() == 0)
-			execlp("/bin/sh", "sh", "-c", config.rightClickCmd.c_str(), NULL);
+		if(fork() == 0) {
+      if(config.rightClickCmd.length() > 0)
+        execlp("/bin/sh", "sh", "-c", config.rightClickCmd.c_str(), NULL);
+    }
 	}
 }
 

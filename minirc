@@ -6,6 +6,7 @@
   "focusedBorderColor" : "#000000",
   "unfocusedBorderColor" : "#888888",
   "rightClickCmd" : "xterm -ls -sb -bg black -fg white",
+  "alternateCmd" : "scrot",
   "borderWidth" : 1,
   "space" : 3,
   "edgeSnap" : true,
