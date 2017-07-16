@@ -1,5 +1,5 @@
 # A new window manager based off my other window manager aewm++ 
-# Copyright (C) 2010-2014 Frank Hale <frankhale@gmail.com>
+# Copyright (C) 2010-2017 Frank Hale <frankhale@gmail.com>
 #
 # aewm++ can be found here: http://github/frankhale/aewmpp
 #
@@ -24,12 +24,11 @@
 # Date: 22 February 2015
 
 CC = clang++
-CFLAGS = -O2 -Wall -std=c++14 -stdlib=libc++
+CFLAGS = -O2 -Wall -std=c++14 
 
 prefix   = 
-INCLUDES = -I$/usr/X11R6
-LDPATH   = -L/usr/X11R6/lib
-LIBS     = -lsupc++ -lc++abi -lXext -lX11 -ljson-c
+INCLUDES =
+LIBS     = -lsupc++ -lXext -lX11 -ljson-c
 CONFIG   = minirc
 
 all: mini
